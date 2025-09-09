@@ -3,7 +3,7 @@ import { supabase } from "../lib/supabaseClient"
 import { FaGithub } from "react-icons/fa";
 import { FcGoogle } from "react-icons/fc"; // Google’s colored logo
 
-import Logo from "../assets/jobin3.png"
+import Logo from "../assets/jobin2.png"
 
 export default function Login() {
   const signIn = async (provider: "github" | "google") => {

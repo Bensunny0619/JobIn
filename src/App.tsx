@@ -5,6 +5,9 @@ import { supabase } from "./lib/supabaseClient"
 import Login from "./pages/Login"
 import Dashboard from "./pages/Dashboard"
 import ProtectedRoute from "./components/ProtectedRoute"
+import { Toaster } from "react-hot-toast"
+
+
 
 export default function App() {
   const [supabaseStatus, setSupabaseStatus] = useState<
@@ -31,6 +34,7 @@ export default function App() {
   if (supabaseStatus === "error") {
     return (
       <div className="grid place-items-center h-screen text-center">
+        <Toaster position="top-right" />
         <h1 className="text-xl font-bold text-red-600">
           Supabase connection failed 🚨
         </h1>

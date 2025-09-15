@@ -51,49 +51,49 @@ export default function Notes({ applicationId }: { applicationId: string }) {
   }, [])
 
   return (
-    <div className="mt-4 border-t pt-4">
-      <h3 className="font-semibold text-gray-700 mb-2">Notes</h3>
-
-      <div className="space-y-2">
-        {notes.map((note) => (
-          <div
-            key={note.id}
-            className="p-2 border rounded-md bg-gray-50 flex justify-between items-center"
-          >
-            <div>
-              <p className="text-sm text-gray-800">{note.content}</p>
-              {note.reminder_date && (
-                <p className="text-xs text-gray-500">
-                  Reminder: {note.reminder_date}
-                </p>
-              )}
-            </div>
-            <button
-              onClick={() => deleteNote(note.id)}
-              className="text-xs text-red-500 hover:underline"
-            >
-              Delete
-            </button>
-          </div>
-        ))}
+    <div className="mt-2 text-xs w-full">
+  <div className="space-y-2 max-h-20 overflow-y-auto scroll-invisible w-full">
+    {notes.map((note) => (
+      <div
+        key={note.id}
+        className="p-2 border rounded-md bg-gray-50 flex justify-between items-start gap-2 w-full"
+      >
+        <div className="flex-1 min-w-0 break-words">
+          <p className="text-gray-800 text-xs">{note.content}</p>
+          {note.reminder_date && (
+            <p className="text-[11px] text-gray-500 truncate">
+              Reminder: {note.reminder_date}
+            </p>
+          )}
+        </div>
+        <button
+          onClick={() => deleteNote(note.id)}
+          className="text-[11px] text-red-500 hover:underline shrink-0"
+        >
+          ✕
+        </button>
       </div>
+    ))}
+  </div>
 
-      <div className="mt-3 space-y-2">
+
+      {/* Add note form */}
+      <div className="mt-2 space-y-2 w-full">
         <textarea
           value={newNote}
           onChange={(e) => setNewNote(e.target.value)}
           placeholder="Add a note..."
-          className="w-full border rounded p-2 text-sm"
+          className="w-full border rounded p-1 text-xs resize-none h-14"
         />
         <input
           type="date"
           value={reminder}
           onChange={(e) => setReminder(e.target.value)}
-          className="w-full border rounded p-2 text-sm"
+          className="w-full border rounded p-1 text-xs"
         />
         <button
           onClick={addNote}
-          className="bg-blue-600 text-white px-3 py-1 rounded text-sm"
+          className="bg-blue-600 text-white px-2 py-1.5 rounded text-xs w-full"
         >
           Add Note
         </button>

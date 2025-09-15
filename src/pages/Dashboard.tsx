@@ -38,6 +38,14 @@ export default function Dashboard() {
   const [isEditOpen, setIsEditOpen] = useState(false)
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const [viewMode, setViewMode] = useState<"grid" | "kanban">("grid")
+  const [showNotes, setShowNotes] = useState(false)
+  const [expandedJobId, setExpandedJobId] = useState<string | null>(null)
+
+// toggle function
+function toggleNotes(jobId: string) {
+  setExpandedJobId((prev) => (prev === jobId ? null : jobId))
+}
+
 
   const statuses = ["applied", "interview", "offer", "rejected"]
 
@@ -222,86 +230,146 @@ export default function Dashboard() {
         ) : jobs.length === 0 ? (
           <p className="text-gray-500">No applications yet. Add one above.</p>
         ) : viewMode === "grid" ? (
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-            {jobs.map((job) => (
-              <div
-  key={job.id}
-  className="bg-white rounded-xl shadow p-4 space-y-2 border border-gray-100"
->
-  <h2 className="font-semibold text-lg text-gray-800">{job.position}</h2>
-  <p className="text-sm text-gray-600">{job.company}</p>
-  <span
-    className={`inline-block px-3 py-1 text-sm rounded-full font-medium ${
-      job.status === "applied"
-        ? "bg-blue-100 text-blue-600"
-        : job.status === "interview"
-        ? "bg-green-100 text-green-600"
-        : job.status === "offer"
-        ? "bg-purple-100 text-purple-600"
-        : "bg-red-100 text-red-600"
-    }`}
-  >
-    {job.status.charAt(0).toUpperCase() + job.status.slice(1)}
-  </span>
-  <p className="text-xs text-gray-400">Applied on: {job.date_applied}</p>
+  <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+    {jobs.map((job) => (
+      <div
+        key={job.id}
+        className="bg-white rounded-xl shadow p-4 space-y-2 border border-gray-100 w-full"
+      >
+        <h2 className="font-semibold text-lg text-gray-800">{job.position}</h2>
+        <p className="text-sm text-gray-600">{job.company}</p>
+        <span
+          className={`inline-block px-3 py-1 text-sm rounded-full font-medium ${
+            job.status === "applied"
+              ? "bg-blue-100 text-blue-600"
+              : job.status === "interview"
+              ? "bg-green-100 text-green-600"
+              : job.status === "offer"
+              ? "bg-purple-100 text-purple-600"
+              : "bg-red-100 text-red-600"
+          }`}
+        >
+          {job.status.charAt(0).toUpperCase() + job.status.slice(1)}
+        </span>
+        <p className="text-xs text-gray-400">Applied on: {job.date_applied}</p>
 
-  <div className="pt-2 flex justify-between items-center">
-    <button
-      onClick={() => openEdit(job)}
-      className="text-sm text-blue-600 hover:underline"
-    >
-      Edit
-    </button>
-    <button
-      onClick={() => handleDelete(job.id)}
-      disabled={deletingId === job.id}
-      className="text-sm text-red-600 hover:underline disabled:opacity-50"
-    >
-      {deletingId === job.id ? "Deleting..." : "Delete"}
-    </button>
-  </div>
-
-  {/* ✅ Notes section */}
-  <Notes applicationId={job.id} />
-</div>
-            ))}
-          </div>
-        ) : (
-          <DndContext
-            sensors={sensors}
-            collisionDetection={closestCenter}
-            onDragEnd={handleDragEnd}
+        <div className="pt-2 flex justify-between items-center">
+          <button
+            onClick={() => openEdit(job)}
+            className="text-sm text-blue-600 hover:underline"
           >
-            <div className="flex gap-4 overflow-x-auto pb-4">
-              {statuses.map((status) => (
-                <DroppableColumn
-                  key={status}
-                  id={status}
-                  data={{ type: "column", columnId: status }}
-                >
-                  <h3 className="font-bold text-lg mb-4 capitalize">{status}</h3>
-                  <SortableContext
-                    items={groupedJobs[status as keyof typeof groupedJobs].map(
-                      (job) => job.id.toString()
-                    )}
-                    strategy={verticalListSortingStrategy}
+            Edit
+          </button>
+          <button
+            onClick={() => handleDelete(job.id)}
+            disabled={deletingId === job.id}
+            className="text-sm text-red-600 hover:underline disabled:opacity-50"
+          >
+            {deletingId === job.id ? "Deleting..." : "Delete"}
+          </button>
+          <button
+            onClick={() => toggleNotes(job.id)}
+            className="text-xs text-gray-600 hover:text-gray-800"
+          >
+            {expandedJobId === job.id ? "Hide Notes" : "Show Notes"}
+          </button>
+        </div>
+
+        {/* ✅ Conditionally render Notes only for expanded job */}
+        {expandedJobId === job.id && <Notes applicationId={job.id} />}
+      </div>
+    ))}
+  </div>
+) : (
+  /* Kanban View */
+ <DndContext
+  sensors={sensors}
+  collisionDetection={closestCenter}
+  onDragEnd={handleDragEnd}
+>
+  {/* ✅ Horizontal scroll with independent column heights */}
+  <div className="flex gap-4 overflow-x-auto pb-4 items-start">
+    {statuses.map((status) => (
+      <DroppableColumn
+        key={status}
+        id={status}
+        data={{ type: "column", columnId: status }}
+      >
+        {/* ✅ Each column stacks its cards independently */}
+        <div className="flex flex-col gap-3 w-64">
+          <h3 className="font-bold text-lg mb-4 capitalize">{status}</h3>
+          <SortableContext
+            items={groupedJobs[status as keyof typeof groupedJobs].map(
+              (job) => job.id.toString()
+            )}
+            strategy={verticalListSortingStrategy}
+          >
+            {groupedJobs[status as keyof typeof groupedJobs].map((job) => (
+              <DraggableCard
+                key={job.id}
+                job={job}
+                onEdit={openEdit}
+                onDelete={handleDelete}
+              >
+                <div className="bg-white rounded-md shadow p-3 space-y-2">
+                  <h2 className="font-semibold text-md text-gray-800">
+                    {job.position}
+                  </h2>
+                  <p className="text-sm text-gray-600">{job.company}</p>
+                  <span
+                    className={`inline-block px-3 py-1 text-xs rounded-full font-medium ${
+                      job.status === "applied"
+                        ? "bg-blue-100 text-blue-600"
+                        : job.status === "interview"
+                        ? "bg-green-100 text-green-600"
+                        : job.status === "offer"
+                        ? "bg-purple-100 text-purple-600"
+                        : "bg-red-100 text-red-600"
+                    }`}
                   >
-                    {groupedJobs[status as keyof typeof groupedJobs].map(
-                      (job) => (
-                        <DraggableCard
-                          key={job.id}
-                          job={job}
-                          onEdit={openEdit}
-                          onDelete={handleDelete}
-                        />
-                      )
-                    )}
-                  </SortableContext>
-                </DroppableColumn>
-              ))}
-            </div>
-          </DndContext>
-        )}
+                    {job.status.charAt(0).toUpperCase() + job.status.slice(1)}
+                  </span>
+                  <p className="text-xs text-gray-400">
+                    Applied on: {job.date_applied}
+                  </p>
+
+                  <div className="pt-2 flex justify-between items-center">
+                    <button
+                      onClick={() => openEdit(job)}
+                      className="text-xs text-blue-600 hover:underline"
+                    >
+                      Edit
+                    </button>
+                    <button
+                      onClick={() => handleDelete(job.id)}
+                      disabled={deletingId === job.id}
+                      className="text-xs text-red-600 hover:underline disabled:opacity-50"
+                    >
+                      {deletingId === job.id ? "Deleting..." : "Delete"}
+                    </button>
+                    <button
+                      onClick={() => toggleNotes(job.id)}
+                      className="text-xs text-gray-600 hover:text-gray-800"
+                    >
+                      {expandedJobId === job.id ? "Hide Notes" : "Show Notes"}
+                    </button>
+                  </div>
+
+                  {/* ✅ Only this card grows */}
+                  {expandedJobId === job.id && (
+                    <Notes applicationId={job.id} />
+                  )}
+                </div>
+              </DraggableCard>
+            ))}
+          </SortableContext>
+        </div>
+      </DroppableColumn>
+    ))}
+  </div>
+</DndContext>
+
+)}
 
         {isEditOpen && selectedJob && (
           <EditJobModal

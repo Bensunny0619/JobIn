@@ -88,12 +88,13 @@ export default function DraggableCard({
 
       {/* Collapsible Notes (compact in Kanban) */}
       {showNotes && (
-        <div className="mt-2">
-          <div className="bg-gray-50 border border-gray-200 rounded-md p-2 max-h-24 overflow-y-auto text-xs">
+        <div className="mt-2 w-full">
+          <div className="bg-gray-50 border border-gray-200 rounded-md p-2 max-h-32 overflow-y-auto text-xs w-full">
             <Notes applicationId={job.id} />
           </div>
         </div>
       )}
+
     </div>
   )
 }

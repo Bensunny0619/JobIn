@@ -1,5 +1,6 @@
 import { useState } from "react"
 import { supabase } from "../lib/supabaseClient"
+import toast from "react-hot-toast"
 
 type Props = {
   onAdded: () => void
@@ -32,6 +33,7 @@ export default function ApplicationForm({ onAdded }: Props) {
 
     if (userError || !user) {
       setError("Unable to get user info.")
+      toast.error("Unable to get user info")
       setLoading(false)
       return
     }
@@ -48,12 +50,14 @@ export default function ApplicationForm({ onAdded }: Props) {
 
     if (error) {
       setError(error.message)
+      toast.error(`Failed to add: ${error.message}`)
     } else {
       setCompany("")
       setPosition("")
       setStatus("applied")
       setDateApplied("")
       onAdded()
+      toast.success("Application added successfully 🎉")
     }
 
     setLoading(false)
@@ -78,7 +82,7 @@ export default function ApplicationForm({ onAdded }: Props) {
             onChange={(e) => setCompany(e.target.value)}
             required
             placeholder="e.g. Google"
-            className="w-full h-10 border border-gray-300 rounded-md px-3 text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full h-10 border border-gray-300 rounded-md text-gray-300 px-3 text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
         </div>
 
@@ -91,7 +95,7 @@ export default function ApplicationForm({ onAdded }: Props) {
             onChange={(e) => setPosition(e.target.value)}
             required
             placeholder="e.g. Frontend Developer"
-            className="w-full h-10 border border-gray-300 rounded-md px-3 text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full h-10 border border-gray-300 rounded-md text-gray-300 px-3 text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
         </div>
 
@@ -102,7 +106,7 @@ export default function ApplicationForm({ onAdded }: Props) {
             id="status"
             value={status}
             onChange={(e) => setStatus(e.target.value)}
-            className="w-full h-10 border border-gray-300 rounded-md px-3 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full h-10 border border-gray-300 rounded-md px-3 text-sm text-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
             {STATUS_OPTIONS.map((option) => (
               <option key={option.value} value={option.value}>
@@ -119,7 +123,7 @@ export default function ApplicationForm({ onAdded }: Props) {
             type="date"
             value={dateApplied}
             onChange={(e) => setDateApplied(e.target.value)}
-            className="w-full h-10 border border-gray-300 rounded-md px-3 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full h-10 border border-gray-300 rounded-md px-3 text-sm text-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
         </div>
       </div>

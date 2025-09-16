@@ -12,19 +12,17 @@ import {
   useSensors,
   PointerSensor,
   closestCenter,
-  // DragEndEvent is a type, import using type-only import below
 } from "@dnd-kit/core"
 import {
   SortableContext,
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable"
 
-
 import DraggableCard from "../components/DraggableCard"
 import DroppableColumn from "../components/DroppableColumn"
 
 type Job = {
-  id: string // UUID
+  id: string
   company: string
   position: string
   status: string
@@ -38,14 +36,11 @@ export default function Dashboard() {
   const [isEditOpen, setIsEditOpen] = useState(false)
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const [viewMode, setViewMode] = useState<"grid" | "kanban">("grid")
-  const [showNotes, setShowNotes] = useState(false)
   const [expandedJobId, setExpandedJobId] = useState<string | null>(null)
 
-// toggle function
-function toggleNotes(jobId: string) {
-  setExpandedJobId((prev) => (prev === jobId ? null : jobId))
-}
-
+  function toggleNotes(jobId: string) {
+    setExpandedJobId((prev) => (prev === jobId ? null : jobId))
+  }
 
   const statuses = ["applied", "interview", "offer", "rejected"]
 
@@ -60,6 +55,7 @@ function toggleNotes(jobId: string) {
       setJobs(data)
     } else if (error) {
       console.error("❌ Fetch error:", error)
+      toast.error("Failed to fetch jobs")
     }
     setLoading(false)
   }
@@ -79,9 +75,7 @@ function toggleNotes(jobId: string) {
   }
 
   async function handleDelete(id: string) {
-    const confirmDelete = confirm(
-      "Are you sure you want to delete this application?"
-    )
+    const confirmDelete = confirm("Are you sure you want to delete this application?")
     if (!confirmDelete) return
 
     setDeletingId(id)
@@ -89,8 +83,10 @@ function toggleNotes(jobId: string) {
 
     if (error) {
       console.error("Delete error:", error.message)
+      toast.error("Failed to delete application")
     } else {
       fetchJobs()
+      toast.success("Application deleted ✅")
     }
 
     setDeletingId(null)
@@ -114,37 +110,24 @@ function toggleNotes(jobId: string) {
 
   const sensors = useSensors(useSensor(PointerSensor))
 
-  // ✅ Fixed drag end handler
-  async function handleDragEnd(event: DragEndEvent) {
-    console.log("🟢 Drag End Event:", event)
+  async function handleDragEnd(event: any) {
     const { active, over } = event
 
-    if (!over) {
-      console.warn("⚠️ No drop target")
-      return
-    }
+    if (!over) return
 
     const activeId = active.id.toString()
     const overId = over.id.toString()
 
-    if (activeId === overId) {
-      console.warn("⚠️ Dropped on itself, ignoring")
-      return
-    }
+    if (activeId === overId) return
 
     let newStatus: string | null = null
     let movedJob: Job | null = null
 
-    // Case 1: dropped on a column → move job between columns
     if (over.data.current?.type === "column") {
       movedJob = jobs.find((j) => j.id === activeId) || null
       if (!movedJob) return
 
       newStatus = overId
-      console.log(
-        `🔄 Moving job ${movedJob.id} (${movedJob.position}) from "${movedJob.status}" → "${newStatus}"`
-      )
-
       setJobs((prev) =>
         prev.map((j) =>
           j.id === movedJob!.id ? { ...j, status: newStatus! } : j
@@ -152,7 +135,6 @@ function toggleNotes(jobId: string) {
       )
     }
 
-    // Case 2: dropped on another card → reorder within same column
     if (over.data.current?.type === "card") {
       const oldIndex = jobs.findIndex((j) => j.id === activeId)
       const newIndex = jobs.findIndex((j) => j.id === overId)
@@ -162,14 +144,7 @@ function toggleNotes(jobId: string) {
       const activeJob = jobs[oldIndex]
       const overJob = jobs[newIndex]
 
-      if (activeJob.status !== overJob.status) {
-        console.log("⚠️ Different columns, ignoring reorder")
-        return
-      }
-
-      console.log(
-        `🔄 Reordering job ${activeJob.position} relative to ${overJob.position}`
-      )
+      if (activeJob.status !== overJob.status) return
 
       setJobs((prev) => {
         const updated = [...prev]
@@ -179,12 +154,10 @@ function toggleNotes(jobId: string) {
       })
 
       movedJob = activeJob
-      newStatus = activeJob.status // stays same column
+      newStatus = activeJob.status
     }
 
-    // ✅ Update Supabase if we know what changed
     if (movedJob && newStatus) {
-      console.log("✅ Sending update to Supabase...", newStatus)
       const { error } = await supabase
         .from("applications")
         .update({ status: newStatus })
@@ -194,7 +167,6 @@ function toggleNotes(jobId: string) {
         console.error("❌ Supabase update error:", error)
         toast.error("Failed to update status")
       } else {
-        console.log("✅ Supabase update successful")
         toast.success(`Moved to ${newStatus}`)
         fetchJobs()
       }
@@ -207,13 +179,6 @@ function toggleNotes(jobId: string) {
       <Toaster position="top-right" />
 
       <div className="flex justify-between p-6 max-w-7xl mx-auto items-center">
-        <button
-          onClick={handleLogout}
-          className="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600 transition"
-        >
-          Logout
-        </button>
-
         <button
           onClick={() => setViewMode(viewMode === "grid" ? "kanban" : "grid")}
           className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition"
@@ -230,146 +195,140 @@ function toggleNotes(jobId: string) {
         ) : jobs.length === 0 ? (
           <p className="text-gray-500">No applications yet. Add one above.</p>
         ) : viewMode === "grid" ? (
-  <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-    {jobs.map((job) => (
-      <div
-        key={job.id}
-        className="bg-white rounded-xl shadow p-4 space-y-2 border border-gray-100 w-full"
-      >
-        <h2 className="font-semibold text-lg text-gray-800">{job.position}</h2>
-        <p className="text-sm text-gray-600">{job.company}</p>
-        <span
-          className={`inline-block px-3 py-1 text-sm rounded-full font-medium ${
-            job.status === "applied"
-              ? "bg-blue-100 text-blue-600"
-              : job.status === "interview"
-              ? "bg-green-100 text-green-600"
-              : job.status === "offer"
-              ? "bg-purple-100 text-purple-600"
-              : "bg-red-100 text-red-600"
-          }`}
-        >
-          {job.status.charAt(0).toUpperCase() + job.status.slice(1)}
-        </span>
-        <p className="text-xs text-gray-400">Applied on: {job.date_applied}</p>
-
-        <div className="pt-2 flex justify-between items-center">
-          <button
-            onClick={() => openEdit(job)}
-            className="text-sm text-blue-600 hover:underline"
-          >
-            Edit
-          </button>
-          <button
-            onClick={() => handleDelete(job.id)}
-            disabled={deletingId === job.id}
-            className="text-sm text-red-600 hover:underline disabled:opacity-50"
-          >
-            {deletingId === job.id ? "Deleting..." : "Delete"}
-          </button>
-          <button
-            onClick={() => toggleNotes(job.id)}
-            className="text-xs text-gray-600 hover:text-gray-800"
-          >
-            {expandedJobId === job.id ? "Hide Notes" : "Show Notes"}
-          </button>
-        </div>
-
-        {/* ✅ Conditionally render Notes only for expanded job */}
-        {expandedJobId === job.id && <Notes applicationId={job.id} />}
-      </div>
-    ))}
-  </div>
-) : (
-  /* Kanban View */
- <DndContext
-  sensors={sensors}
-  collisionDetection={closestCenter}
-  onDragEnd={handleDragEnd}
->
-  {/* ✅ Horizontal scroll with independent column heights */}
-  <div className="flex gap-4 overflow-x-auto pb-4 items-start">
-    {statuses.map((status) => (
-      <DroppableColumn
-        key={status}
-        id={status}
-        data={{ type: "column", columnId: status }}
-      >
-        {/* ✅ Each column stacks its cards independently */}
-        <div className="flex flex-col gap-3 w-64">
-          <h3 className="font-bold text-lg mb-4 capitalize">{status}</h3>
-          <SortableContext
-            items={groupedJobs[status as keyof typeof groupedJobs].map(
-              (job) => job.id.toString()
-            )}
-            strategy={verticalListSortingStrategy}
-          >
-            {groupedJobs[status as keyof typeof groupedJobs].map((job) => (
-              <DraggableCard
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            {jobs.map((job) => (
+              <div
                 key={job.id}
-                job={job}
-                onEdit={openEdit}
-                onDelete={handleDelete}
+                className="bg-white rounded-xl shadow p-4 space-y-2 border border-gray-100 w-full"
               >
-                <div className="bg-white rounded-md shadow p-3 space-y-2">
-                  <h2 className="font-semibold text-md text-gray-800">
-                    {job.position}
-                  </h2>
-                  <p className="text-sm text-gray-600">{job.company}</p>
-                  <span
-                    className={`inline-block px-3 py-1 text-xs rounded-full font-medium ${
-                      job.status === "applied"
-                        ? "bg-blue-100 text-blue-600"
-                        : job.status === "interview"
-                        ? "bg-green-100 text-green-600"
-                        : job.status === "offer"
-                        ? "bg-purple-100 text-purple-600"
-                        : "bg-red-100 text-red-600"
-                    }`}
+                <h2 className="font-semibold text-lg text-gray-800">{job.position}</h2>
+                <p className="text-sm text-gray-600">{job.company}</p>
+                <span
+                  className={`inline-block px-3 py-1 text-sm rounded-full font-medium ${
+                    job.status === "applied"
+                      ? "bg-blue-100 text-blue-600"
+                      : job.status === "interview"
+                      ? "bg-green-100 text-green-600"
+                      : job.status === "offer"
+                      ? "bg-purple-100 text-purple-600"
+                      : "bg-red-100 text-red-600"
+                  }`}
+                >
+                  {job.status.charAt(0).toUpperCase() + job.status.slice(1)}
+                </span>
+                <p className="text-xs text-gray-400">Applied on: {job.date_applied}</p>
+
+                <div className="pt-2 flex justify-between items-center">
+                  <button
+                    onClick={() => openEdit(job)}
+                    className="text-sm text-blue-600 hover:underline"
                   >
-                    {job.status.charAt(0).toUpperCase() + job.status.slice(1)}
-                  </span>
-                  <p className="text-xs text-gray-400">
-                    Applied on: {job.date_applied}
-                  </p>
-
-                  <div className="pt-2 flex justify-between items-center">
-                    <button
-                      onClick={() => openEdit(job)}
-                      className="text-xs text-blue-600 hover:underline"
-                    >
-                      Edit
-                    </button>
-                    <button
-                      onClick={() => handleDelete(job.id)}
-                      disabled={deletingId === job.id}
-                      className="text-xs text-red-600 hover:underline disabled:opacity-50"
-                    >
-                      {deletingId === job.id ? "Deleting..." : "Delete"}
-                    </button>
-                    <button
-                      onClick={() => toggleNotes(job.id)}
-                      className="text-xs text-gray-600 hover:text-gray-800"
-                    >
-                      {expandedJobId === job.id ? "Hide Notes" : "Show Notes"}
-                    </button>
-                  </div>
-
-                  {/* ✅ Only this card grows */}
-                  {expandedJobId === job.id && (
-                    <Notes applicationId={job.id} />
-                  )}
+                    Edit
+                  </button>
+                  <button
+                    onClick={() => handleDelete(job.id)}
+                    disabled={deletingId === job.id}
+                    className="text-sm text-red-600 hover:underline disabled:opacity-50"
+                  >
+                    {deletingId === job.id ? "Deleting..." : "Delete"}
+                  </button>
+                  <button
+                    onClick={() => toggleNotes(job.id)}
+                    className="text-xs text-gray-600 hover:text-gray-800"
+                  >
+                    {expandedJobId === job.id ? "Hide Notes" : "Show Notes"}
+                  </button>
                 </div>
-              </DraggableCard>
-            ))}
-          </SortableContext>
-        </div>
-      </DroppableColumn>
-    ))}
-  </div>
-</DndContext>
 
-)}
+                {expandedJobId === job.id && <Notes applicationId={job.id} />}
+              </div>
+            ))}
+          </div>
+        ) : (
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragEnd={handleDragEnd}
+          >
+            <div className="flex gap-4 overflow-x-auto pb-4 items-start">
+              {statuses.map((status) => (
+                <DroppableColumn
+                  key={status}
+                  id={status}
+                  data={{ type: "column", columnId: status }}
+                >
+                  <div className="flex flex-col gap-3 w-64">
+                    <h3 className="font-bold text-lg mb-4 capitalize">{status}</h3>
+                    <SortableContext
+                      items={groupedJobs[status as keyof typeof groupedJobs].map(
+                        (job) => job.id.toString()
+                      )}
+                      strategy={verticalListSortingStrategy}
+                    >
+                      {groupedJobs[status as keyof typeof groupedJobs].map((job) => (
+                        <DraggableCard
+                          key={job.id}
+                          job={job}
+                          onEdit={openEdit}
+                          onDelete={handleDelete}
+                        >
+                          <div className="bg-white rounded-md shadow p-3 space-y-2">
+                            <h2 className="font-semibold text-md text-gray-800">
+                              {job.position}
+                            </h2>
+                            <p className="text-sm text-gray-600">{job.company}</p>
+                            <span
+                              className={`inline-block px-3 py-1 text-xs rounded-full font-medium ${
+                                job.status === "applied"
+                                  ? "bg-blue-100 text-blue-600"
+                                  : job.status === "interview"
+                                  ? "bg-green-100 text-green-600"
+                                  : job.status === "offer"
+                                  ? "bg-purple-100 text-purple-600"
+                                  : "bg-red-100 text-red-600"
+                              }`}
+                            >
+                              {job.status.charAt(0).toUpperCase() + job.status.slice(1)}
+                            </span>
+                            <p className="text-xs text-gray-400">
+                              Applied on: {job.date_applied}
+                            </p>
+
+                            <div className="pt-2 flex justify-between items-center">
+                              <button
+                                onClick={() => openEdit(job)}
+                                className="text-xs text-blue-600 hover:underline"
+                              >
+                                Edit
+                              </button>
+                              <button
+                                onClick={() => handleDelete(job.id)}
+                                disabled={deletingId === job.id}
+                                className="text-xs text-red-600 hover:underline disabled:opacity-50"
+                              >
+                                {deletingId === job.id ? "Deleting..." : "Delete"}
+                              </button>
+                              <button
+                                onClick={() => toggleNotes(job.id)}
+                                className="text-xs text-gray-600 hover:text-gray-800"
+                              >
+                                {expandedJobId === job.id ? "Hide Notes" : "Show Notes"}
+                              </button>
+                            </div>
+
+                            {expandedJobId === job.id && (
+                              <Notes applicationId={job.id} />
+                            )}
+                          </div>
+                        </DraggableCard>
+                      ))}
+                    </SortableContext>
+                  </div>
+                </DroppableColumn>
+              ))}
+            </div>
+          </DndContext>
+        )}
 
         {isEditOpen && selectedJob && (
           <EditJobModal

@@ -7,8 +7,6 @@ import Dashboard from "./pages/Dashboard"
 import ProtectedRoute from "./components/ProtectedRoute"
 import { Toaster } from "react-hot-toast"
 
-
-
 export default function App() {
   const [supabaseStatus, setSupabaseStatus] = useState<
     "checking" | "ok" | "error"
@@ -34,7 +32,8 @@ export default function App() {
   if (supabaseStatus === "error") {
     return (
       <div className="grid place-items-center h-screen text-center">
-        <Toaster position="top-right" />
+        {/* ✅ Toast is always available */}
+        <Toaster position="top-right" reverseOrder={false} />
         <h1 className="text-xl font-bold text-red-600">
           Supabase connection failed 🚨
         </h1>
@@ -47,17 +46,40 @@ export default function App() {
   }
 
   return (
-    <Routes>
-      <Route path="/login" element={<Login />} />
-      <Route
-        path="/dashboard"
-        element={
-          <ProtectedRoute>
-            <Dashboard />
-          </ProtectedRoute>
-        }
-      />
-      <Route path="*" element={<Login />} />
-    </Routes>
+    <>
+      {/* ✅ Global Toaster (always available) */}
+     <Toaster
+  position="top-right"
+  reverseOrder={false}
+  toastOptions={{
+    // Default style
+    className: "bg-blue-600 text-white rounded-lg shadow-lg px-4 py-2",
+    duration: 3000,
+    style: {
+      background: "none", // remove inline bg so Tailwind takes over
+    },
+    success: {
+      className: "bg-green-600 text-white rounded-lg shadow-lg px-4 py-2",
+    },
+    error: {
+      className: "bg-red-600 text-white rounded-lg shadow-lg px-4 py-2",
+    },
+  }}
+/>
+
+
+      <Routes>
+        <Route path="/login" element={<Login />} />
+        <Route
+          path="/dashboard"
+          element={
+            <ProtectedRoute>
+              <Dashboard />
+            </ProtectedRoute>
+          }
+        />
+        <Route path="*" element={<Login />} />
+      </Routes>
+    </>
   )
 }

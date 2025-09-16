@@ -25,16 +25,36 @@ export default function Notes({ applicationId }: { applicationId: string }) {
   async function addNote() {
     if (!newNote.trim()) return
 
-    const { error } = await supabase.from("notes").insert([
-      {
-        application_id: applicationId,
-        content: newNote,
-        reminder_date: reminder || null,
-        user_id: (await supabase.auth.getUser()).data.user?.id,
-      },
-    ])
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
 
-    if (!error) {
+    // Insert into notes
+    const { data: insertedNote, error } = await supabase
+      .from("notes")
+      .insert([
+        {
+          application_id: applicationId,
+          content: newNote,
+          reminder_date: reminder || null,
+          user_id: user?.id,
+        },
+      ])
+      .select("id")
+      .single()
+
+    if (!error && insertedNote) {
+      // Insert into reminder_queue if reminder is set
+      if (reminder) {
+        await supabase.from("reminder_queue").insert([
+          {
+            note_id: insertedNote.id,
+            user_id: user?.id,
+            reminder_date: reminder,
+          },
+        ])
+      }
+
       setNewNote("")
       setReminder("")
       fetchNotes()
@@ -50,32 +70,32 @@ export default function Notes({ applicationId }: { applicationId: string }) {
     fetchNotes()
   }, [])
 
+  // ✅ Return is inside the component
   return (
     <div className="mt-2 text-xs w-full">
-  <div className="space-y-2 max-h-20 overflow-y-auto scroll-invisible w-full">
-    {notes.map((note) => (
-      <div
-        key={note.id}
-        className="p-2 border rounded-md bg-gray-50 flex justify-between items-start gap-2 w-full"
-      >
-        <div className="flex-1 min-w-0 break-words">
-          <p className="text-gray-800 text-xs">{note.content}</p>
-          {note.reminder_date && (
-            <p className="text-[11px] text-gray-500 truncate">
-              Reminder: {note.reminder_date}
-            </p>
-          )}
-        </div>
-        <button
-          onClick={() => deleteNote(note.id)}
-          className="text-[11px] text-red-500 hover:underline shrink-0"
-        >
-          ✕
-        </button>
+      <div className="space-y-2 max-h-20 overflow-y-auto scroll-invisible w-full">
+        {notes.map((note) => (
+          <div
+            key={note.id}
+            className="p-2 border rounded-md bg-gray-50 flex justify-between items-start gap-2 w-full"
+          >
+            <div className="flex-1 min-w-0 break-words">
+              <p className="text-gray-800 text-xs">{note.content}</p>
+              {note.reminder_date && (
+                <p className="text-[11px] text-gray-500 truncate">
+                  Reminder: {note.reminder_date}
+                </p>
+              )}
+            </div>
+            <button
+              onClick={() => deleteNote(note.id)}
+              className="text-[11px] text-red-500 hover:underline shrink-0"
+            >
+              ✕
+            </button>
+          </div>
+        ))}
       </div>
-    ))}
-  </div>
-
 
       {/* Add note form */}
       <div className="mt-2 space-y-2 w-full">

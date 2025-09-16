@@ -1,5 +1,6 @@
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { supabase } from "../lib/supabaseClient"
+import toast from "react-hot-toast"
 
 type Job = {
   id: number
@@ -47,9 +48,11 @@ export default function EditJobModal({ job, onClose, onUpdated }: Props) {
 
     if (error) {
       setError(error.message)
+      toast.error(`Update failed: ${error.message}`)
     } else {
       onUpdated()
       onClose()
+      toast.success("Application updated ✅")
     }
 
     setLoading(false)
@@ -69,7 +72,7 @@ export default function EditJobModal({ job, onClose, onUpdated }: Props) {
               type="text"
               value={company}
               onChange={(e) => setCompany(e.target.value)}
-              className="w-full h-10 border border-gray-300 rounded-md px-3 text-sm"
+              className="w-full h-10 text-gray-300 border border-gray-300 rounded-md px-3 text-sm"
               required
             />
           </div>
@@ -80,7 +83,7 @@ export default function EditJobModal({ job, onClose, onUpdated }: Props) {
               type="text"
               value={position}
               onChange={(e) => setPosition(e.target.value)}
-              className="w-full h-10 border border-gray-300 rounded-md px-3 text-sm"
+              className="w-full h-10 text-gray-300 border border-gray-300 rounded-md px-3 text-sm"
               required
             />
           </div>
@@ -90,7 +93,7 @@ export default function EditJobModal({ job, onClose, onUpdated }: Props) {
             <select
               value={status}
               onChange={(e) => setStatus(e.target.value)}
-              className="w-full h-10 border border-gray-300 rounded-md px-3 text-sm"
+              className="w-full h-10 text-gray-300 border border-gray-300 rounded-md px-3 text-sm"
             >
               {STATUS_OPTIONS.map((option) => (
                 <option key={option.value} value={option.value}>
@@ -106,7 +109,7 @@ export default function EditJobModal({ job, onClose, onUpdated }: Props) {
               type="date"
               value={dateApplied}
               onChange={(e) => setDateApplied(e.target.value)}
-              className="w-full h-10 border border-gray-300 rounded-md px-3 text-sm"
+              className="w-full h-10 text-gray-300 border border-gray-300 rounded-md px-3 text-sm"
             />
           </div>
 

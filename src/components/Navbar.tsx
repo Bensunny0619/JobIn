@@ -1,30 +1,41 @@
 import { useEffect, useRef, useState } from "react"
 import { LogOut, Bell, Search } from "lucide-react"
-import { supabase } from "../lib/supabaseClient"
-import Logo from "../assets/jobin2.png"
-import { useSession } from "@supabase/auth-helpers-react"
+import { supabase } from "../lib/supabaseClient" // Assuming you have this file
+import Logo from "../assets/jobin2.png" // Assuming you have this asset
 import Notifications from "./Notifications"
 
+// Define the component's props
 type NavbarProps = {
-  minimal?: boolean
+  minimal?: boolean;
+  searchTerm: string; // Add this prop
+  onSearchChange: (term: string) => void; // Add this prop
 }
 
-export default function Navbar({ minimal = false }: NavbarProps) {
-  const session = useSession()
-  const userId = session?.user?.id || ""
+export default function Navbar({ minimal = false, searchTerm, onSearchChange }: NavbarProps) {
+  const [userId, setUserId] = useState<string>("");
+  const [open, setOpen] = useState(false);
+  const [unreadCount, setUnreadCount] = useState<number>(0);
+  const wrapperRef = useRef<HTMLDivElement | null>(null);
 
-  const [open, setOpen] = useState(false)
-  const [unreadCount, setUnreadCount] = useState<number>(0)
-  const wrapperRef = useRef<HTMLDivElement | null>(null)
+  useEffect(() => {
+    const getUser = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user) {
+        setUserId(session.user.id);
+      }
+    };
+    getUser();
+  }, []);
 
   async function fetchUnreadCount() {
+    // ... (rest of your existing fetchUnreadCount function is fine)
     if (!userId) {
       setUnreadCount(0)
       return
     }
     const { count, error } = await supabase
       .from("notifications")
-      .select("id", { count: "exact", head: true }) // ✅ only count, not full rows
+      .select("id", { count: "exact", head: true })
       .eq("user_id", userId)
       .eq("read", false)
 
@@ -34,6 +45,7 @@ export default function Navbar({ minimal = false }: NavbarProps) {
   }
 
   useEffect(() => {
+    // ... (rest of your existing useEffect for unread count is fine)
     if (!userId) return
     fetchUnreadCount()
 
@@ -52,6 +64,7 @@ export default function Navbar({ minimal = false }: NavbarProps) {
   }, [userId])
 
   useEffect(() => {
+    // ... (rest of your existing useEffect for click outside is fine)
     function handleClickOutside(e: MouseEvent) {
       if (open && wrapperRef.current && !wrapperRef.current.contains(e.target as Node)) {
         setOpen(false)
@@ -72,19 +85,23 @@ export default function Navbar({ minimal = false }: NavbarProps) {
         <div className="flex justify-between items-center h-16">
           <div className="flex items-center gap-2">
             <img src={Logo} alt="JobIn logo" className="h-8 rounded-3xl" />
-            <span className="text-xl font-heading text-brand.blue">JobIn</span>
+            <span className="text-xl font-heading text-brand-blue">JobIn</span>
           </div>
 
           {!minimal && (
             <>
-              <div className="hidden md:flex items-center bg-brand.gray rounded-lg px-3 py-1.5 w-80">
+              {/* === MODIFIED SEARCH INPUT === */}
+              <div className="hidden md:flex items-center bg-gray-100 rounded-lg px-3 py-1.5 w-80">
                 <Search className="h-4 w-4 text-gray-500" />
                 <input
                   type="text"
-                  placeholder="Search jobs..."
+                  placeholder="Search by company or position..."
                   className="bg-transparent outline-none text-sm ml-2 w-full"
+                  value={searchTerm} // Controlled component
+                  onChange={(e) => onSearchChange(e.target.value)} // Update state on change
                 />
               </div>
+              {/* ============================== */}
 
               <div className="flex items-center gap-4">
                 <div ref={wrapperRef} className="relative">

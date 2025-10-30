@@ -18,10 +18,9 @@ type Props = {
   onJobSaved: () => void;
 };
 
-// --- NEW: Define search sources ---
 const SEARCH_SOURCES = {
-  REMOTE_OK: 'RemoteOK',
   GOOGLE_JOBS: 'Google Jobs (via SerpApi)',
+  REMOTE_OK: 'RemoteOK',
 };
 
 export default function JobSearchModal({ isOpen, onClose, onJobSaved }: Props) {
@@ -30,8 +29,6 @@ export default function JobSearchModal({ isOpen, onClose, onJobSaved }: Props) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [savingId, setSavingId] = useState<string | null>(null);
-  
-  // --- NEW: State for the selected search source ---
   const [source, setSource] = useState(SEARCH_SOURCES.GOOGLE_JOBS);
 
   const handleSearch = async (e?: React.FormEvent) => {
@@ -48,15 +45,18 @@ export default function JobSearchModal({ isOpen, onClose, onJobSaved }: Props) {
         const response = await fetch(`https://remoteok.com/api?tag=${searchTerm}`);
         if (!response.ok) throw new Error("Network response was not ok.");
         const rawData = await response.json();
-        data = rawData.slice(1); // Remove legal notice
+        data = rawData.slice(1);
       } else {
-        // --- NEW: Call the Supabase Edge Function ---
+        // This is the single, correct block for calling the Edge Function
         const { data: functionData, error: functionError } = await supabase.functions.invoke(
           'job-search',
           { body: { searchTerm } }
         );
 
-        if (functionError) throw new Error(functionError.message);
+        if (functionError) {
+          const errorMessage = functionError.context?.msg || functionError.message;
+          throw new Error(errorMessage);
+        }
         data = functionData.jobs;
       }
       setResults(data);
@@ -73,10 +73,9 @@ export default function JobSearchModal({ isOpen, onClose, onJobSaved }: Props) {
     if (isOpen) {
       handleSearch();
     }
-  }, [isOpen, source]); // Re-run search if source changes
+  }, [isOpen, source]);
 
   const handleSaveJob = async (job: RemoteJob) => {
-    // ... (This function remains exactly the same)
     setSavingId(job.id);
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
@@ -111,7 +110,6 @@ export default function JobSearchModal({ isOpen, onClose, onJobSaved }: Props) {
         <Dialog.Panel className="w-full max-w-2xl h-[80vh] flex flex-col rounded-xl bg-white">
           <div className="p-6 border-b">
             <Dialog.Title className="text-xl font-semibold">Find Jobs Online</Dialog.Title>
-            {/* --- NEW: Form includes a source selector --- */}
             <form onSubmit={handleSearch} className="flex gap-2 mt-4 items-center">
               <input
                 type="text"
@@ -135,7 +133,32 @@ export default function JobSearchModal({ isOpen, onClose, onJobSaved }: Props) {
           </div>
 
           <div className="flex-1 p-6 overflow-y-auto">
-             {/* ... (rest of the JSX remains the same) ... */}
+            {loading && <p className="text-center">Loading...</p>}
+            {error && <p className="text-center text-red-500">{error}</p>}
+            {!loading && !error && (
+              <ul className="space-y-4">
+                {results.map((job) => (
+                  <li key={job.id} className="p-4 border rounded-lg flex justify-between items-center">
+                    <div>
+                      <h3 className="font-semibold">{job.position}</h3>
+                      <p className="text-sm text-gray-600">{job.company} - <span className="text-gray-500">{job.location || 'Remote'}</span></p>
+                      <div className="flex gap-1 mt-2">
+                        {job.tags.slice(0, 3).map(tag => (
+                          <span key={tag} className="text-xs bg-gray-200 text-gray-700 px-2 py-0.5 rounded-full">{tag}</span>
+                        ))}
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => handleSaveJob(job)}
+                      disabled={savingId === job.id}
+                      className="bg-green-600 text-white text-sm px-3 py-1.5 rounded-md hover:bg-green-700 disabled:opacity-50"
+                    >
+                      {savingId === job.id ? 'Saving...' : 'Save'}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
           </div>
         </Dialog.Panel>
       </div>

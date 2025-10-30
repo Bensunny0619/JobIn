@@ -1,14 +1,14 @@
 import { useEffect, useRef, useState } from "react"
-import { LogOut, Bell, Search } from "lucide-react"
-import { supabase } from "../lib/supabaseClient" // Assuming you have this file
-import Logo from "../assets/jobin2.png" // Assuming you have this asset
+import { Link } from "react-router-dom"
+import { LogOut, Bell, Search, User as UserIcon } from "lucide-react" // Renamed User to UserIcon to avoid conflicts
+import { supabase } from "../lib/supabaseClient"
+import Logo from "../assets/jobin2.png"
 import Notifications from "./Notifications"
 
-// Define the component's props
 type NavbarProps = {
   minimal?: boolean;
-  searchTerm: string; // Add this prop
-  onSearchChange: (term: string) => void; // Add this prop
+  searchTerm: string;
+  onSearchChange: (term: string) => void;
 }
 
 export default function Navbar({ minimal = false, searchTerm, onSearchChange }: NavbarProps) {
@@ -17,18 +17,42 @@ export default function Navbar({ minimal = false, searchTerm, onSearchChange }: 
   const [unreadCount, setUnreadCount] = useState<number>(0);
   const wrapperRef = useRef<HTMLDivElement | null>(null);
 
+  // --- NEW: State for the avatar image URL ---
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null); 
+  // ---
+
   useEffect(() => {
-    const getUser = async () => {
+    const getUserAndProfile = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (session?.user) {
-        setUserId(session.user.id);
+        const currentUserId = session.user.id;
+        setUserId(currentUserId);
+        
+        // --- NEW: Fetch user's avatar ---
+        const { data: profileData, error } = await supabase
+          .from('user_profiles')
+          .select('avatar_url')
+          .eq('id', currentUserId)
+          .single();
+
+        if (error) {
+          console.error("Error fetching avatar:", error.message);
+        } else if (profileData?.avatar_url) {
+          // Get a temporary signed URL to display the private image
+          const { data: signedUrlData } = await supabase.storage
+            .from('avatars')
+            .createSignedUrl(profileData.avatar_url, 3600); // Expires in 1 hour
+          
+          setAvatarUrl(signedUrlData?.signedUrl || null);
+        }
+        // ---
       }
     };
-    getUser();
+    getUserAndProfile();
   }, []);
 
+  // ... (the rest of your useEffects and functions for notifications and logout remain exactly the same)
   async function fetchUnreadCount() {
-    // ... (rest of your existing fetchUnreadCount function is fine)
     if (!userId) {
       setUnreadCount(0)
       return
@@ -45,7 +69,6 @@ export default function Navbar({ minimal = false, searchTerm, onSearchChange }: 
   }
 
   useEffect(() => {
-    // ... (rest of your existing useEffect for unread count is fine)
     if (!userId) return
     fetchUnreadCount()
 
@@ -64,7 +87,6 @@ export default function Navbar({ minimal = false, searchTerm, onSearchChange }: 
   }, [userId])
 
   useEffect(() => {
-    // ... (rest of your existing useEffect for click outside is fine)
     function handleClickOutside(e: MouseEvent) {
       if (open && wrapperRef.current && !wrapperRef.current.contains(e.target as Node)) {
         setOpen(false)
@@ -79,6 +101,7 @@ export default function Navbar({ minimal = false, searchTerm, onSearchChange }: 
     window.location.href = "/"
   }
 
+
   return (
     <header className="bg-white border-b shadow-sm">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -90,20 +113,28 @@ export default function Navbar({ minimal = false, searchTerm, onSearchChange }: 
 
           {!minimal && (
             <>
-              {/* === MODIFIED SEARCH INPUT === */}
               <div className="hidden md:flex items-center bg-gray-100 rounded-lg px-3 py-1.5 w-80">
                 <Search className="h-4 w-4 text-gray-500" />
                 <input
                   type="text"
                   placeholder="Search by company or position..."
                   className="bg-transparent outline-none text-sm ml-2 w-full"
-                  value={searchTerm} // Controlled component
-                  onChange={(e) => onSearchChange(e.target.value)} // Update state on change
+                  value={searchTerm}
+                  onChange={(e) => onSearchChange(e.target.value)}
                 />
               </div>
-              {/* ============================== */}
 
               <div className="flex items-center gap-4">
+                {/* --- NEW: Conditionally render avatar or icon --- */}
+                <Link to="/profile" className="rounded-full focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500" aria-label="Go to profile">
+                  {avatarUrl ? (
+                    <img src={avatarUrl} alt="User profile" className="h-8 w-8 rounded-full object-cover" />
+                  ) : (
+                    <UserIcon className="h-5 w-5 text-gray-600" />
+                  )}
+                </Link>
+                {/* --- */}
+
                 <div ref={wrapperRef} className="relative">
                   <button
                     onClick={() => setOpen((s) => !s)}

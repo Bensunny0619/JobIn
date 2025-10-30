@@ -7,6 +7,7 @@ type Props = {
 }
 
 const STATUS_OPTIONS = [
+  { label: "Saved", value: "saved" },
   { label: "Applied", value: "applied" },
   { label: "Interview", value: "interview" },
   { label: "Offer", value: "offer" },
@@ -16,7 +17,7 @@ const STATUS_OPTIONS = [
 export default function ApplicationForm({ onAdded }: Props) {
   const [company, setCompany] = useState("")
   const [position, setPosition] = useState("")
-  const [status, setStatus] = useState("applied")
+  const [status, setStatus] = useState("saved")
   const [dateApplied, setDateApplied] = useState("")
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)

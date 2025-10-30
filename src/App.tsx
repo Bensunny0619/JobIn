@@ -1,11 +1,28 @@
 // App.tsx
 import { useEffect, useState } from "react"
-import { Routes, Route } from "react-router-dom"
+import { Routes, Route, Outlet } from "react-router-dom" // Import Outlet
 import { supabase } from "./lib/supabaseClient"
 import Login from "./pages/Login"
 import Dashboard from "./pages/Dashboard"
+import Profile from "./pages/Profile" // Import Profile
 import ProtectedRoute from "./components/ProtectedRoute"
+import Navbar from "./components/Navbar" // Import Navbar
 import { Toaster } from "react-hot-toast"
+
+// A layout component that includes the Navbar
+const MainLayout = () => {
+  // You might need to pass search state down if you keep it at the Dashboard level
+  // For now, let's simplify.
+  const [searchTerm, setSearchTerm] = useState("");
+  return (
+    <div className="min-h-screen bg-gray-50">
+      <Navbar searchTerm={searchTerm} onSearchChange={setSearchTerm} />
+      {/* The Outlet component will render the matched child route element */}
+      <Outlet context={{ searchTerm, setSearchTerm }} /> 
+    </div>
+  );
+};
+
 
 export default function App() {
   const [supabaseStatus, setSupabaseStatus] = useState<
@@ -32,7 +49,6 @@ export default function App() {
   if (supabaseStatus === "error") {
     return (
       <div className="grid place-items-center h-screen text-center">
-        {/* ✅ Toast is always available */}
         <Toaster position="top-right" reverseOrder={false} />
         <h1 className="text-xl font-bold text-red-600">
           Supabase connection failed 🚨
@@ -47,37 +63,31 @@ export default function App() {
 
   return (
     <>
-      {/* ✅ Global Toaster (always available) */}
-     <Toaster
-  position="top-right"
-  reverseOrder={false}
-  toastOptions={{
-    // Default style
-    className: "bg-blue-600 text-white rounded-lg shadow-lg px-4 py-2",
-    duration: 3000,
-    style: {
-      background: "none", // remove inline bg so Tailwind takes over
-    },
-    success: {
-      className: "bg-green-600 text-white rounded-lg shadow-lg px-4 py-2",
-    },
-    error: {
-      className: "bg-red-600 text-white rounded-lg shadow-lg px-4 py-2",
-    },
-  }}
-/>
-
-
+      <Toaster
+        position="top-right"
+        reverseOrder={false}
+        toastOptions={{
+            className: "bg-blue-600 text-white rounded-lg shadow-lg px-4 py-2",
+            duration: 3000,
+            style: { background: "none" },
+            success: { className: "bg-green-600 text-white rounded-lg shadow-lg px-4 py-2" },
+            error: { className: "bg-red-600 text-white rounded-lg shadow-lg px-4 py-2" },
+        }}
+      />
       <Routes>
         <Route path="/login" element={<Login />} />
         <Route
-          path="/dashboard"
+          path="/"
           element={
             <ProtectedRoute>
-              <Dashboard />
+              <MainLayout />
             </ProtectedRoute>
           }
-        />
+        >
+          {/* Nested routes will render inside MainLayout's Outlet */}
+          <Route path="dashboard" element={<Dashboard />} />
+          <Route path="profile" element={<Profile />} />
+        </Route>
         <Route path="*" element={<Login />} />
       </Routes>
     </>

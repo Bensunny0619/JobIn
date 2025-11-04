@@ -21,7 +21,7 @@ type Props = {
   onAnalyze: (job: Job) => void; 
 }
 
-export default function DraggableCard({ job, onEdit, onDelete, onApplyNow }: Props) {
+export default function DraggableCard({ job, onEdit, onDelete, onApplyNow, onAnalyze }: Props) {
   const { attributes, listeners, setNodeRef, transform, transition } =
     useSortable({ id: job.id.toString(), data: { type: "card" } });
 

@@ -21,7 +21,7 @@ type Job = {
   status: string
   date_applied: string
   job_url?: string | null;
-  match_analysis: any;
+  match_analysis?: any | null;
 }
 
 export default function Dashboard() {
@@ -302,7 +302,7 @@ async function handleApplyNow(job: Job) {
                         <SortableContext items={groupedJobs[status as keyof typeof groupedJobs].map((job) => job.id.toString())} strategy={verticalListSortingStrategy}>
                           {groupedJobs[status as keyof typeof groupedJobs].map((job) => (
                             // UPDATED: Pass the new onApplyNow prop
-                            <DraggableCard key={job.id} job={job} onEdit={openEdit} onDelete={handleDelete} onApplyNow={handleApplyNow} />
+                            <DraggableCard key={job.id} job={job} onEdit={openEdit} onDelete={handleDelete} onApplyNow={handleApplyNow} onAnalyze={handleAnalyzeMatch} />
                           ))}
                         </SortableContext>
                       </div>
@@ -318,13 +318,13 @@ async function handleApplyNow(job: Job) {
 
 
            {isMatchModalOpen && selectedJobForAnalysis && (
-        <MatchAnalysisModal
-          isOpen={isMatchModalOpen}
-          onClose={() => setIsMatchModalOpen(false)}
-          analysis={isAnalyzingMatch ? null : selectedJobForAnalysis.match_analysis}
-          jobPosition={selectedJobForAnalysis.position}
-        />
-      )}
+    <MatchAnalysisModal
+      isOpen={isMatchModalOpen}
+      onClose={() => setIsMatchModalOpen(false)}
+      analysis={isAnalyzingMatch ? null : selectedJobForAnalysis.match_analysis}
+      jobPosition={selectedJobForAnalysis.position}
+    />
+  )}
       </main>
     </div>
   )

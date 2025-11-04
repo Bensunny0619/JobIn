@@ -1,7 +1,6 @@
 import { useEffect, useState, useMemo } from "react"
 import { supabase } from "../lib/supabaseClient"
 import ApplicationForm from "../components/ApplicationForm"
-import Navbar from "../components/Navbar"
 import EditJobModal from "../components/EditJobModal"
 import toast, { Toaster } from "react-hot-toast"
 import Notes from "../components/Notes"
@@ -13,6 +12,7 @@ import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable"
 
 import DraggableCard from "../components/DraggableCard"
 import DroppableColumn from "../components/DroppableColumn"
+import MatchAnalysisModal from "../components/MatchAnalysisModal";
 
 type Job = {
   id: string
@@ -21,6 +21,7 @@ type Job = {
   status: string
   date_applied: string
   job_url?: string | null;
+  match_analysis: any;
 }
 
 export default function Dashboard() {
@@ -32,7 +33,10 @@ export default function Dashboard() {
   const [viewMode, setViewMode] = useState<"grid" | "kanban" | "analytics">("grid")
   const [expandedJobId, setExpandedJobId] = useState<string | null>(null)
   const [searchTerm, setSearchTerm] = useState("")
-  const [isJobSearchOpen, setIsJobSearchOpen] = useState(false); // State for search modal
+  const [isJobSearchOpen, setIsJobSearchOpen] = useState(false); 
+  const [isMatchModalOpen, setIsMatchModalOpen] = useState(false);
+  const [selectedJobForAnalysis, setSelectedJobForAnalysis] = useState<Job | null>(null);
+  const [isAnalyzingMatch, setIsAnalyzingMatch] = useState(false);
 
   // All other functions (fetchJobs, handleDelete, etc.) remain unchanged
   // ... (copy all your existing functions here)
@@ -203,6 +207,33 @@ async function handleApplyNow(job: Job) {
     }
   }
 
+
+   async function handleAnalyzeMatch(job: Job) {
+    setSelectedJobForAnalysis(job);
+    setIsMatchModalOpen(true);
+
+    // If analysis already exists, don't re-run
+    if (job.match_analysis) return;
+
+    setIsAnalyzingMatch(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('job-matcher', {
+        body: { applicationId: job.id },
+      });
+
+      if (error) throw new Error(error.message);
+
+      // Refetch jobs to get the new analysis data
+      await fetchJobs();
+      toast.success("Match analysis complete!");
+    } catch (err: any) {
+      toast.error(`Analysis failed: ${err.message}`);
+      setIsMatchModalOpen(false); // Close modal on error
+    } finally {
+      setIsAnalyzingMatch(false);
+    }
+  }
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* <Navbar searchTerm={searchTerm} onSearchChange={setSearchTerm} /> */}
@@ -284,6 +315,16 @@ async function handleApplyNow(job: Job) {
         )}
         {isJobSearchOpen && ( <JobSearchModal isOpen={isJobSearchOpen} onClose={() => setIsJobSearchOpen(false)} onJobSaved={() => { fetchJobs(); setIsJobSearchOpen(false); }} /> )}
         {isEditOpen && selectedJob && ( <EditJobModal job={selectedJob} onClose={() => setIsEditOpen(false)} onUpdated={fetchJobs} /> )}
+
+
+           {isMatchModalOpen && selectedJobForAnalysis && (
+        <MatchAnalysisModal
+          isOpen={isMatchModalOpen}
+          onClose={() => setIsMatchModalOpen(false)}
+          analysis={isAnalyzingMatch ? null : selectedJobForAnalysis.match_analysis}
+          jobPosition={selectedJobForAnalysis.position}
+        />
+      )}
       </main>
     </div>
   )

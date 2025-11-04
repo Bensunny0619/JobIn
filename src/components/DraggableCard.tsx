@@ -17,7 +17,8 @@ type Props = {
   job: Job
   onEdit: (job: Job) => void
   onDelete: (id: string) => void
-  onApplyNow: (job: Job) => void; // NEW PROP
+  onApplyNow: (job: Job) => void; 
+  onAnalyze: (job: Job) => void; 
 }
 
 export default function DraggableCard({ job, onEdit, onDelete, onApplyNow }: Props) {
@@ -68,6 +69,7 @@ export default function DraggableCard({ job, onEdit, onDelete, onApplyNow }: Pro
         ) : (
           <div className="flex justify-between items-center">
             <button onClick={() => onEdit(job)} className="text-xs text-blue-600 hover:underline">Edit</button>
+            <button onClick={() => onAnalyze(job)} className="text-xs text-green-600 hover:underline">Analyze</button>
             <button onClick={() => onDelete(job.id)} className="text-xs text-red-600 hover:underline">Delete</button>
             <button onClick={() => setShowNotes((prev) => !prev)} className="text-xs text-gray-600 hover:text-gray-800">
               {showNotes ? "Hide Notes" : "Show Notes"}

@@ -13,7 +13,7 @@ export default function Profile() {
   const [uploading, setUploading] = useState(false)
   
   // --- NEW: Add state to track the analysis process ---
-  const [analysis, setAnalysis] = useState<any | null>(null);
+  const [analysis, setAnalysis] = useState<any | null>(null);  
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const analysisInterval = useRef<number | null>(null);
 

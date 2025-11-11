@@ -30,6 +30,7 @@ export default function EditJobModal({ job, onClose, onUpdated }: Props) {
   const [dateApplied, setDateApplied] = useState(job.date_applied)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [interviewDate, setInterviewDate] = useState('');
 
   async function handleUpdate(e: React.FormEvent) {
     e.preventDefault()
@@ -43,6 +44,7 @@ export default function EditJobModal({ job, onClose, onUpdated }: Props) {
         position,
         status,
         date_applied: dateApplied,
+        interview_date: interviewDate || null,
       })
       .eq("id", job.id)
 
@@ -102,6 +104,18 @@ export default function EditJobModal({ job, onClose, onUpdated }: Props) {
               ))}
             </select>
           </div>
+
+          {status === 'interview' && (
+    <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">Interview Date & Time</label>
+        <input
+          type="datetime-local"
+          value={interviewDate}
+          onChange={(e) => setInterviewDate(e.target.value)}
+          className="w-full h-10 text-gray-800 border border-gray-300 rounded-md px-3 text-sm"
+        />
+    </div>
+)}
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Date Applied</label>

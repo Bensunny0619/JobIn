@@ -2,6 +2,8 @@ import { useState } from "react"
 import { useSortable } from "@dnd-kit/sortable"
 import { CSS } from "@dnd-kit/utilities"
 import Notes from "../components/Notes"
+import { format } from 'date-fns'
+import toast from 'react-hot-toast' // <-- Import toast
 
 type Job = {
   id: string
@@ -9,10 +11,11 @@ type Job = {
   position: string
   status: string
   date_applied: string
-  job_url?: string | null; // Add job_url to the type
+  job_url?: string | null;
+  interview_date?: string | null; // <-- ADD THIS FIELD
+  match_analysis?: any | null;
 }
 
-// UPDATED: Add onApplyNow to the component's props
 type Props = {
   job: Job
   onEdit: (job: Job) => void
@@ -32,11 +35,38 @@ export default function DraggableCard({ job, onEdit, onDelete, onApplyNow, onAna
 
   const [showNotes, setShowNotes] = useState(false)
 
+  // --- This function now lives INSIDE the component ---
+  function handleSchedule() {
+    if (!job.interview_date) {
+        toast.error("Please set an interview date first by editing the job.");
+        return;
+    }
+
+    const startTime = new Date(job.interview_date);
+    // Assume the interview is 1 hour long
+    const endTime = new Date(startTime.getTime() + 60 * 60 * 1000);
+
+    // Format dates for Google Calendar URL (YYYYMMDDTHHMMSSZ)
+    // We need to be careful about timezones, so we format without the 'Z'
+    const gCalStartTime = format(startTime, "yyyyMMdd'T'HHmmss");
+    const gCalEndTime = format(endTime, "yyyyMMdd'T'HHmmss");
+
+    const eventDetails = {
+        text: `Interview: ${job.position} at ${job.company}`,
+        dates: `${gCalStartTime}/${gCalEndTime}`,
+        details: `Interview for the ${job.position} role. Good luck!`,
+    };
+
+    const gCalUrl = `https://www.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(eventDetails.text)}&dates=${eventDetails.dates}&details=${encodeURIComponent(eventDetails.details)}`;
+
+    window.open(gCalUrl, '_blank', 'noopener,noreferrer');
+  }
+
   return (
     <div
       ref={setNodeRef}
       style={style}
-      {...attributes} // only attributes here
+      {...attributes}
       className="bg-white rounded-lg shadow p-3 space-y-2 border border-gray-200 mb-3 w-full text-sm"
     >
       {/* Job info + drag handle */}
@@ -44,7 +74,7 @@ export default function DraggableCard({ job, onEdit, onDelete, onApplyNow, onAna
         <h2 className="font-semibold text-base text-gray-800 truncate">{job.position}</h2>
         <p className="text-xs text-gray-600 truncate">{job.company}</p>
         <span className={`inline-block mt-1 px-2 py-0.5 text-xs rounded-full font-medium ${
-            job.status === "saved" ? "bg-yellow-100 text-yellow-700" // Style for 'saved'
+            job.status === "saved" ? "bg-yellow-100 text-yellow-700"
             : job.status === "applied" ? "bg-blue-100 text-blue-600"
             : job.status === "interview" ? "bg-green-100 text-green-600"
             : job.status === "offer" ? "bg-purple-100 text-purple-600"
@@ -57,7 +87,7 @@ export default function DraggableCard({ job, onEdit, onDelete, onApplyNow, onAna
         </p>
       </div>
 
-      {/* UPDATED: Conditional Action Buttons */}
+      {/* Action Buttons */}
       <div className="pt-2">
         {job.status === 'saved' ? (
           <button
@@ -67,9 +97,15 @@ export default function DraggableCard({ job, onEdit, onDelete, onApplyNow, onAna
             Apply Now
           </button>
         ) : (
-          <div className="flex justify-between items-center">
+          <div className="flex justify-between items-center flex-wrap gap-2">
             <button onClick={() => onEdit(job)} className="text-xs text-blue-600 hover:underline">Edit</button>
             <button onClick={() => onAnalyze(job)} className="text-xs text-green-600 hover:underline">Analyze</button>
+            
+            {/* --- The "Schedule" button is now correctly placed here --- */}
+            {job.status === 'interview' && (
+              <button onClick={handleSchedule} className="text-xs text-purple-600 hover:underline">Schedule</button>
+            )}
+
             <button onClick={() => onDelete(job.id)} className="text-xs text-red-600 hover:underline">Delete</button>
             <button onClick={() => setShowNotes((prev) => !prev)} className="text-xs text-gray-600 hover:text-gray-800">
               {showNotes ? "Hide Notes" : "Show Notes"}

@@ -42,3 +42,14 @@ entrypoint = "./functions/job-matcher/index.ts"
 # Specifies static files to be bundled with the function. Supports glob patterns.
 # For example, if you want to serve static HTML pages in your function:
 # static_files = [ "./functions/job-matcher/*.html" ]
+
+[functions.analyze-resume-sync]
+enabled = true
+verify_jwt = true
+import_map = "./functions/analyze-resume-sync/deno.json"
+# Uncomment to specify a custom file path to the entrypoint.
+# Supported file extensions are: .ts, .js, .mjs, .jsx, .tsx
+entrypoint = "./functions/analyze-resume-sync/index.ts"
+# Specifies static files to be bundled with the function. Supports glob patterns.
+# For example, if you want to serve static HTML pages in your function:
+# static_files = [ "./functions/analyze-resume-sync/*.html" ]

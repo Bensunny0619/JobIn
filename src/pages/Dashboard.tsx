@@ -21,6 +21,7 @@ type Job = {
   status: string
   date_applied: string
   job_url?: string | null;
+  interview_date?: string | null; 
   match_analysis?: any | null;
 }
 

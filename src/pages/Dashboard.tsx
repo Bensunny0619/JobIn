@@ -6,6 +6,7 @@ import toast, { Toaster } from "react-hot-toast"
 import Notes from "../components/Notes"
 import AnalyticsDashboard from "../components/AnalyticsDashboard"
 import JobSearchModal from "../components/JobSearchModal" // Import the new modal
+import { useOutletContext } from "react-router-dom";
 
 import { DndContext, useSensor, useSensors, PointerSensor, closestCenter } from "@dnd-kit/core"
 import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable"
@@ -25,6 +26,8 @@ type Job = {
   match_analysis?: any | null;
 }
 
+type AppContext = { searchTerm: string; };
+
 export default function Dashboard() {
   const [jobs, setJobs] = useState<Job[]>([])
   const [loading, setLoading] = useState(true)
@@ -33,11 +36,11 @@ export default function Dashboard() {
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const [viewMode, setViewMode] = useState<"grid" | "kanban" | "analytics">("grid")
   const [expandedJobId, setExpandedJobId] = useState<string | null>(null)
-  const [searchTerm, setSearchTerm] = useState("")
   const [isJobSearchOpen, setIsJobSearchOpen] = useState(false); 
   const [isMatchModalOpen, setIsMatchModalOpen] = useState(false);
   const [selectedJobForAnalysis, setSelectedJobForAnalysis] = useState<Job | null>(null);
   const [isAnalyzingMatch, setIsAnalyzingMatch] = useState(false);
+  const { searchTerm } = useOutletContext<AppContext>();
 
   // All other functions (fetchJobs, handleDelete, etc.) remain unchanged
   // ... (copy all your existing functions here)

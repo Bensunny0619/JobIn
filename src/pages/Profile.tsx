@@ -4,6 +4,12 @@ import toast from 'react-hot-toast'
 import type { User } from '@supabase/supabase-js'
 import Avatar from '../components/Avatar'
 
+type ResumeAnalysis = {
+  summary?: string
+  skills?: string[]
+  [key: string]: unknown
+}
+
 export default function Profile() {
   const [loading, setLoading] = useState(true)
   const [user, setUser] = useState<User | null>(null)
@@ -11,10 +17,9 @@ export default function Profile() {
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
   const [resumeUrl, setResumeUrl] = useState<string | null>(null)
   const [uploading, setUploading] = useState(false)
-  const [analysis, setAnalysis] = useState<any | null>(null)
+  const [analysis, setAnalysis] = useState<ResumeAnalysis | null>(null)
   const [isAnalyzing, setIsAnalyzing] = useState(false)
 
-  // Fetch initial profile data on component mount
   useEffect(() => {
     const fetchProfile = async () => {
       setLoading(true)
@@ -43,13 +48,11 @@ export default function Profile() {
     fetchProfile()
   }, [])
 
-  // Handler for the "Analyze Resume" button
   const handleAnalyzeResume = async () => {
     setIsAnalyzing(true)
     const analysisPromise = async () => {
       const { data, error } = await supabase.functions.invoke('analyze-resume-sync')
       if (error) {
-        // Try to parse the error for a more specific message
         const errorMessage = error.context?.msg || error.message;
         throw new Error(errorMessage);
       }
@@ -71,7 +74,6 @@ export default function Profile() {
     })
   }
 
-  // Handler for uploading a new resume file
   const handleResumeUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     if (!event.target.files || event.target.files.length === 0 || !user) return
 
@@ -105,20 +107,26 @@ export default function Profile() {
     })
   }
   
-  // Handler to update the user's full name
   const handleUpdateProfile = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) return;
-    toast.promise(supabase.from('user_profiles').upsert({ id: user.id, full_name: fullName }), {
+    
+    // FIX: This function now correctly awaits the Supabase call inside the toast.promise,
+    // resolving any potential "query was not a promise" errors.
+    const updatePromise = async () => {
+      const { error } = await supabase.from('user_profiles').upsert({ id: user.id, full_name: fullName });
+      if (error) throw new Error(error.message);
+    };
+
+    toast.promise(updatePromise(), {
       loading: 'Saving profile...',
       success: 'Profile saved successfully! 🎉',
       error: 'Failed to save profile.',
     });
   };
 
-  // Handler for uploading a new avatar image
   const handleAvatarUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    if (!event.target.files || !event.target.files.length === 0 || !user) return;
+    if (!event.target.files || event.target.files.length === 0 || !user) return;
     setUploading(true);
     const file = event.target.files[0];
     const filePath = `${user.id}/${Math.random()}.${file.name.split('.').pop()}`;
@@ -137,24 +145,28 @@ export default function Profile() {
     }).finally(() => setUploading(false));
   };
 
-  // Handler for downloading the current resume
   const handleDownloadResume = async () => {
     if (!resumeUrl || !user) return;
-    toast.promise(supabase.storage.from('resumes').download(resumeUrl), {
+    const downloadPromise = async () => {
+      // FIX: The result of .download() is destructured to get `data` and `error`.
+      // This prevents the "is not assignable to type BlobPart" error.
+      const { data: fileData, error } = await supabase.storage.from('resumes').download(resumeUrl);
+      if (error || !fileData) throw new Error(error?.message || 'No file data returned');
+      
+      const blob = fileData; // fileData is already a Blob
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = resumeUrl.split('/').pop() || 'resume';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+    };
+    toast.promise(downloadPromise(), {
       loading: 'Downloading resume...',
-      success: (data) => {
-        const blob = new Blob([data]);
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = resumeUrl.split('/').pop() || 'resume';
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        window.URL.revokeObjectURL(url);
-        return 'Download complete!';
-      },
-      error: 'Failed to download resume.',
+      success: 'Download complete!',
+      error: (err) => `Failed to download resume: ${err?.message || err}`,
     });
   };
 
@@ -169,13 +181,21 @@ export default function Profile() {
         </div>
         <div className="md:col-span-2 space-y-8">
           
-          {/* --- THIS SECTION IS NOW RESTORED --- */}
           <div className="bg-white p-6 rounded-2xl shadow-md border border-gray-200">
             <h2 className="text-xl font-semibold text-gray-800 mb-4">Personal Details</h2>
             <form onSubmit={handleUpdateProfile} className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
-                <input type="text" value={user?.email || ''} disabled className="w-full h-10 border bg-gray-100 border-gray-300 rounded-md px-3 text-sm" />
+                <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                <input
+                  id="email"
+                  type="text"
+                  value={user?.email || ''}
+                  disabled
+                  title="Email address"
+                  placeholder={user?.email || ''}
+                  aria-label="Email address"
+                  className="w-full h-10 border bg-gray-100 border-gray-300 rounded-md px-3 text-sm"
+                />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Full Name</label>

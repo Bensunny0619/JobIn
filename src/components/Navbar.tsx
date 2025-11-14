@@ -20,7 +20,6 @@ export default function Navbar({ minimal = false, searchTerm, onSearchChange }: 
   const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
 
   useEffect(() => {
-    // This logic to get user and profile is unchanged
     const getUserAndProfile = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (session?.user) {
@@ -37,13 +36,55 @@ export default function Navbar({ minimal = false, searchTerm, onSearchChange }: 
     getUserAndProfile();
   }, []);
 
-  // All other existing hooks and functions are unchanged
-  // You should have fetchUnreadCount, useEffect for count, useEffect for click outside, and handleLogout here.
-  // I am stubbing them to save space.
-  async function fetchUnreadCount() { /* ... same as before ... */ }
-  useEffect(() => { /* ... same as before ... */ }, [userId])
-  useEffect(() => { /* ... same as before ... */ }, [open])
-  async function handleLogout() { /* ... same as before ... */ }
+  useEffect(() => {
+    // FIX: The fetchUnreadCount function is now defined and used within this useEffect,
+    // and the setUnreadCount function is also used, resolving the "declared but never read" errors.
+    async function fetchUnreadCount() {
+      if (!userId) return;
+      try {
+        const { count, error } = await supabase
+          .from('notifications')
+          .select('id', { count: 'exact', head: true })
+          .eq('recipient_id', userId)
+          .eq('is_read', false);
+
+        if (error) {
+          console.error("Error fetching unread count:", error.message);
+          return;
+        }
+
+        setUnreadCount(count ?? 0);
+      } catch (err) {
+        console.error("Error fetching unread count:", err);
+      }
+    }
+
+    if (userId) {
+      fetchUnreadCount();
+    } else {
+      setUnreadCount(0);
+    }
+  }, [userId]);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (open && wrapperRef.current && !wrapperRef.current.contains(event.target as Node)) {
+        setOpen(false);
+      }
+    }
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [open]);
+
+  async function handleLogout() {
+    const { error } = await supabase.auth.signOut();
+    if (error) {
+      console.error("Error signing out:", error.message);
+      return;
+    }
+    window.location.href = "/";
+  }
 
   return (
     <header className="bg-white border-b shadow-sm">
@@ -65,13 +106,11 @@ export default function Navbar({ minimal = false, searchTerm, onSearchChange }: 
                   </div>
                   
                   <div className="flex items-center gap-4">
-                    <button onClick={() => setIsMobileSearchOpen(true)} className="md:hidden p-1"><Search className="h-5 w-5 text-gray-600" /></button>
+                    <button type="button" onClick={() => setIsMobileSearchOpen(true)} className="md:hidden p-1" aria-label="Open search" title="Open search"><Search className="h-5 w-5 text-gray-600" /></button>
                     <Link to="/profile" className="rounded-full" aria-label="Go to profile">
                       {avatarUrl ? <img src={avatarUrl} alt="User profile" className="h-8 w-8 rounded-full object-cover" /> : <UserIcon className="h-5 w-5 text-gray-600" />}
                     </Link>
                     
-                    {/* --- THIS IS THE ONLY CHANGE --- */}
-                    {/* The wrapper div is now 'static' on mobile and 'relative' on desktop */}
                     <div ref={wrapperRef} className="static sm:relative">
                       <button onClick={() => setOpen((s) => !s)} className="relative p-1 rounded-full focus:outline-none" aria-label="Toggle notifications">
                         <Bell className="h-5 w-5 text-gray-600" />
@@ -79,7 +118,6 @@ export default function Navbar({ minimal = false, searchTerm, onSearchChange }: 
                       </button>
 
                       {open && (
-                        // Positioned relative to the viewport on mobile, and relative to the bell icon on desktop
                         <div className="fixed top-16 left-4 right-4 sm:absolute sm:top-full sm:left-auto sm:right-0 sm:w-80 mt-2 z-50">
                           <Notifications userId={userId} onClose={() => setOpen(false)} />
                         </div>
@@ -100,7 +138,7 @@ export default function Navbar({ minimal = false, searchTerm, onSearchChange }: 
             <div className="flex items-center bg-gray-100 rounded-lg px-3 py-1.5 w-full">
               <Search className="h-4 w-4 text-gray-500" />
               <input type="text" placeholder="Search..." className="bg-transparent outline-none text-sm ml-2 w-full" value={searchTerm} onChange={(e) => onSearchChange(e.target.value)} autoFocus />
-              <button onClick={() => setIsMobileSearchOpen(false)} className="ml-2 p-1"><X className="h-5 w-5 text-gray-600" /></button>
+              <button onClick={() => setIsMobileSearchOpen(false)} className="ml-2 p-1" aria-label="Close search" title="Close search"><X className="h-5 w-5 text-gray-600" /></button>
             </div>
           )}
         </div>

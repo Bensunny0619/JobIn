@@ -99,9 +99,16 @@ export default function AnalyticsDashboard({ jobs }: Props) {
                 outerRadius={80}
                 fill="#8884d8"
                 dataKey="value"
-                label={({ name, percent }: { name: string; percent: number }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                // --- FIX: This function now safely accesses properties from the props object ---
+                // Recharts provides a complex object, so we check for the name and percent
+                // in multiple possible locations to avoid runtime errors and fix the TypeScript error.
+                label={(props: any) => {
+                  const name = props.name ?? props.payload?.name ?? '';
+                  const percent = props.percent ?? props.payload?.percent ?? 0;
+                  return `${name} ${(percent * 100).toFixed(0)}%`;
+                }}
               >
-                {analyticsData.applicationsByStatus.map((entry, index) => (
+                {analyticsData.applicationsByStatus.map((_entry, index) => (
                   <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                 ))}
               </Pie>

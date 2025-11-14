@@ -124,7 +124,7 @@ export default function Dashboard() {
 
   const sensors = useSensors(useSensor(PointerSensor))
 
-  async function handleDragEnd(event: any) {
+  async function handleDragEnd(event: import("@dnd-kit/core").DragEndEvent) {
      const { active, over } = event
     if (!over) return
     const activeId = active.id.toString()
@@ -158,14 +158,18 @@ export default function Dashboard() {
     if (job.match_analysis) return;
     setIsAnalyzingMatch(true);
     try {
-      const { data, error } = await supabase.functions.invoke('job-matcher', {
+      const { error } = await supabase.functions.invoke('job-matcher', {
         body: { applicationId: job.id },
       });
       if (error) throw new Error(error.message);
       await fetchJobs();
       toast.success("Match analysis complete!");
-    } catch (err: any) {
-      toast.error(`Analysis failed: ${err.message}`);
+    } catch (err: unknown) {
+      let message = "Unknown error";
+      if (err instanceof Error) {
+        message = err.message;
+      }
+      toast.error(`Analysis failed: ${message}`);
       setIsMatchModalOpen(false);
     } finally {
       setIsAnalyzingMatch(false);

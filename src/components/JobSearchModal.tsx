@@ -61,8 +61,9 @@ export default function JobSearchModal({ isOpen, onClose, onJobSaved }: Props) {
         data = functionData.jobs;
       }
       setResults(data);
-    } catch (err: any) {
-      setError(`Failed to fetch jobs: ${err.message}`);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      setError(`Failed to fetch jobs: ${message}`);
     } finally {
       setLoading(false);
     }
@@ -115,7 +116,12 @@ export default function JobSearchModal({ isOpen, onClose, onJobSaved }: Props) {
             <Dialog.Title className="text-xl font-semibold">Find Jobs Online</Dialog.Title>
             <form onSubmit={handleSearch} className="flex gap-2 mt-4 items-center">
               <input type="text" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} placeholder="e.g., React, Python..." className="w-full h-10 border border-gray-300 rounded-md px-3 text-sm" />
-              <select value={source} onChange={(e) => setSource(e.target.value)} className="h-10 border border-gray-300 rounded-md px-3 text-sm">
+              <select
+                aria-label="Job search source"
+                value={source}
+                onChange={(e) => setSource(e.target.value)}
+                className="h-10 border border-gray-300 rounded-md px-3 text-sm"
+              >
                 <option>{SEARCH_SOURCES.GOOGLE_JOBS}</option>
                 <option>{SEARCH_SOURCES.REMOTE_OK}</option>
               </select>
@@ -128,11 +134,11 @@ export default function JobSearchModal({ isOpen, onClose, onJobSaved }: Props) {
             {loading && <p className="text-center">Loading...</p>}
             {error && <p className="text-center text-red-500">{error}</p>}
             {!loading && !error && (
-              <ul className="space-y-4">
-                {results.length === 0 ? (
-                  <p className="text-center text-gray-500">No jobs found for "{searchTerm}".</p>
-                ) : (
-                  results.map((job) => {
+              results.length === 0 ? (
+                <p className="text-center text-gray-500">No jobs found for "{searchTerm}".</p>
+              ) : (
+                <ul className="space-y-4">
+                  {results.map((job) => {
                     const isSaving = savingId === job.id;
                     const isSaved = savedJobIds.has(job.id);
                     return (
@@ -159,9 +165,9 @@ export default function JobSearchModal({ isOpen, onClose, onJobSaved }: Props) {
                         </button>
                       </li>
                     )
-                  })
-                )}
-              </ul>
+                  })}
+                </ul>
+              )
             )}
           </div>
         </Dialog.Panel>

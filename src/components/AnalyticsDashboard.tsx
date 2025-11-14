@@ -35,6 +35,7 @@ export default function AnalyticsDashboard({ jobs }: Props) {
     const totalApplications = jobs.length
     const interviewsAndOffers = jobs.filter(j => j.status === 'interview' || j.status === 'offer').length
     const offers = jobs.filter(j => j.status === 'offer').length
+    
 
     // --- Data for Pie Chart ---
     const statusCounts = jobs.reduce((acc, job) => {
@@ -98,7 +99,7 @@ export default function AnalyticsDashboard({ jobs }: Props) {
                 outerRadius={80}
                 fill="#8884d8"
                 dataKey="value"
-                label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                label={({ name, percent }: { name: string; percent: number }) => `${name} ${(percent * 100).toFixed(0)}%`}
               >
                 {analyticsData.applicationsByStatus.map((entry, index) => (
                   <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />

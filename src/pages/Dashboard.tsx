@@ -327,16 +327,16 @@ export default function Dashboard() {
           </>
         )}
         
-        {isJobSearchOpen && ( <JobSearchModal isOpen={isJobSearchOpen} onClose={() => setIsJobSearchOpen(false)} onJobSaved={() => { fetchJobs(); setIsJobSearchOpen(false); }} /> )}
-        {isEditOpen && selectedJob && ( <EditJobModal job={selectedJob} onClose={() => setIsEditOpen(false)} onUpdated={fetchJobs} /> )}
-        {isMatchModalOpen && selectedJobForAnalysis && (
-          <MatchAnalysisModal
-            isOpen={isMatchModalOpen}
-            onClose={() => setIsMatchModalOpen(false)}
-            analysis={isAnalyzingMatch ? null : selectedJobForAnalysis.match_analysis}
-            jobPosition={selectedJobForAnalysis.position}
-          />
+        {isJobSearchOpen && ( 
+          <JobSearchModal 
+            isOpen={isJobSearchOpen} 
+            onClose={() => setIsJobSearchOpen(false)} 
+            onJobSaved={fetchJobs} // This now ONLY refetches jobs
+          /> 
         )}
+
+        {isEditOpen && selectedJob && ( <EditJobModal job={selectedJob} onClose={() => setIsEditOpen(false)} onUpdated={fetchJobs} /> )}
+        {isMatchModalOpen && selectedJobForAnalysis && ( <MatchAnalysisModal isOpen={isMatchModalOpen} onClose={() => setIsMatchModalOpen(false)} analysis={isAnalyzingMatch ? null : selectedJobForAnalysis.match_analysis} jobPosition={selectedJobForAnalysis.position} /> )}
       </main>
     </div>
   )

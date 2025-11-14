@@ -1,15 +1,14 @@
 // App.tsx
 import { useEffect, useState } from "react"
-import { Routes, Route, Outlet, Navigate } from "react-router-dom" // Import Navigate
+import { Routes, Route, Outlet, Navigate } from "react-router-dom"
 import { supabase } from "./lib/supabaseClient"
 import Login from "./pages/Login"
 import Dashboard from "./pages/Dashboard"
 import Profile from "./pages/Profile"
-import ProtectedRoute from "./components/ProtectedRoute"
 import Navbar from "./components/Navbar"
 import { Toaster } from "react-hot-toast"
+import type { Session } from '@supabase/supabase-js'
 
-// This MainLayout component is correct and does not need to change.
 const MainLayout = () => {
   const [searchTerm, setSearchTerm] = useState("");
   return (
@@ -21,19 +20,27 @@ const MainLayout = () => {
 };
 
 export default function App() {
-  // Your Supabase connection check is good and can remain.
-  const [supabaseStatus, setSupabaseStatus] = useState<"checking" | "ok" | "error">("checking")
-  useEffect(() => {
-    const checkConnection = async () => {
-      const { error } = await supabase.from("applications").select("*").limit(1)
-      if (error) setSupabaseStatus("error")
-      else setSupabaseStatus("ok")
-    }
-    checkConnection()
-  }, [])
-  if (supabaseStatus === "checking") return <div className="grid place-items-center h-screen">Loading...</div>
-  if (supabaseStatus === "error") return <div className="grid place-items-center h-screen text-center">...</div>
+  const [session, setSession] = useState<Session | null>(null);
+  const [loading, setLoading] = useState(true);
 
+  useEffect(() => {
+    // This listener is the key. It fires once on initial load (INITIAL_SESSION)
+    // and again whenever the auth state changes (SIGNED_IN, SIGNED_OUT).
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+      setLoading(false); // We are no longer loading once we have this initial information.
+    });
+
+    // Cleanup the subscription when the component unmounts
+    return () => subscription.unsubscribe();
+  }, []);
+
+  // While waiting for the initial auth state, show a loading screen.
+  // This prevents the "race condition".
+  if (loading) {
+    return <div className="h-screen grid place-items-center">Authenticating...</div>;
+  }
+  
   return (
     <>
       <Toaster
@@ -48,29 +55,26 @@ export default function App() {
         }}
       />
       <Routes>
-        <Route path="/login" element={<Login />} />
-        
-        {/* This is the main protected route section */}
-        <Route
-          path="/"
-          element={
-            <ProtectedRoute>
-              <MainLayout />
-            </ProtectedRoute>
-          }
-        >
-          {/* --- THIS IS THE ONLY FIX YOU NEED --- */}
-          {/* This line tells the router to redirect to "/dashboard" by default
-              when the user is at the root "/" path. */}
-          <Route index element={<Navigate to="/dashboard" replace />} />
-
-          {/* Your existing nested routes remain the same */}
-          <Route path="dashboard" element={<Dashboard />} />
-          <Route path="profile" element={<Profile />} />
-        </Route>
-        
-        {/* Your fallback route remains the same */}
-        <Route path="*" element={<Login />} />
+        {/* If there is NO session, only the /login route is available.
+            All other paths will redirect to /login. */}
+        {!session ? (
+          <>
+            <Route path="/login" element={<Login />} />
+            <Route path="*" element={<Navigate to="/login" replace />} />
+          </>
+        ) : (
+          /* If there IS a session, the protected routes are available. */
+          <>
+            <Route path="/" element={<MainLayout />}>
+              <Route index element={<Navigate to="/dashboard" replace />} />
+              <Route path="dashboard" element={<Dashboard />} />
+              <Route path="profile" element={<Profile />} />
+            </Route>
+            {/* If a logged-in user tries to go to /login, send them to the dashboard instead. */}
+            <Route path="/login" element={<Navigate to="/dashboard" replace />} />
+            <Route path="*" element={<Navigate to="/dashboard" replace />} />
+          </>
+        )}
       </Routes>
     </>
   )

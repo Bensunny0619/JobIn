@@ -8,7 +8,7 @@ import Profile from "./pages/Profile"
 import ProtectedRoute from "./components/ProtectedRoute"
 import Navbar from "./components/Navbar"
 import { Toaster } from "react-hot-toast"
-import { Session } from '@supabase/supabase-js'
+import type { Session } from '@supabase/supabase-js'
 
 // This MainLayout component remains the same
 const MainLayout = () => {

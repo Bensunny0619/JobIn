@@ -158,11 +158,11 @@ export default function Profile() {
     });
   };
 
-  if (loading && !user) return <p className="text-center p-6">Loading profile...</p>
+  if (loading && !user) return <p className="text-center p-4 sm:p-6">Loading profile...</p>
 
   return (
-    <div className="max-w-4xl mx-auto p-6 space-y-8">
-      <h1 className="text-3xl font-bold text-gray-800">Your Profile</h1>
+    <div className="max-w-4xl mx-auto p-4 sm:p-6 space-y-8">
+      <h1 className="text-3xl text-center font-bold text-gray-800">Your Profile</h1>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
         <div className="md:col-span-1 flex justify-center pt-6">
           <Avatar url={avatarUrl} onUpload={handleAvatarUpload} uploading={uploading || isAnalyzing} />
@@ -222,7 +222,7 @@ export default function Profile() {
 
           {/* AI Analysis Display */}
           {analysis && (
-            <div className="bg-white p-6 rounded-2xl shadow-md border border-gray-200">
+            <div className="bg-white p-4 sm:p-6 rounded-2xl shadow-md border border-gray-200">
               <h2 className="text-xl font-semibold text-gray-800 mb-4">AI Resume Analysis</h2>
                 <>
                   {analysis.summary && (

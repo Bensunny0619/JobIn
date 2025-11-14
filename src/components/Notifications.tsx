@@ -47,11 +47,7 @@ export default function Notifications({
           if (payload.eventType === "INSERT") {
             const newNotif = payload.new as Notification
             setNotifications((prev) => [newNotif, ...prev])
-
-            // ✅ Show toast for new notifications
-            toast(newNotif.message, {
-              icon: "🔔",
-            })
+            toast(newNotif.message, { icon: "🔔" })
           } else if (payload.eventType === "UPDATE") {
             setNotifications((prev) =>
               prev.map((n) => (n.id === (payload.new as Notification).id ? (payload.new as Notification) : n))
@@ -79,7 +75,6 @@ export default function Notifications({
       .update({ read: true })
       .eq("user_id", userId)
       .eq("read", false)
-
     if (!error) {
       setNotifications((prev) => prev.map((n) => ({ ...n, read: true })))
     }
@@ -88,8 +83,11 @@ export default function Notifications({
   const unreadCount = notifications.filter((n) => !n.read).length
 
   return (
-    <div className="bg-white border rounded-lg shadow-md p-2 w-72">
-      <div className="flex items-center justify-between mb-2">
+    // --- THIS IS THE ONLY CHANGE ---
+    // Before: className="... w-72"
+    // After:  Removed fixed width to make the component flexible.
+    <div className="bg-white border rounded-lg shadow-md p-2 w-full">
+      <div className="flex items-center justify-between p-2 mb-2 border-b">
         <h3 className="font-semibold text-sm">Notifications</h3>
         {unreadCount > 0 && (
           <button onClick={markAllAsRead} className="text-xs text-blue-600 hover:underline">
@@ -99,9 +97,9 @@ export default function Notifications({
       </div>
 
       {notifications.length === 0 ? (
-        <p className="text-xs text-gray-500">No notifications yet</p>
+        <p className="text-xs text-gray-500 p-4 text-center">No notifications yet</p>
       ) : (
-        <ul className="max-h-56 overflow-y-auto text-sm space-y-1">
+        <ul className="max-h-64 sm:max-h-80 overflow-y-auto text-sm space-y-1">
           {notifications.map((n) => (
             <li
               key={n.id}

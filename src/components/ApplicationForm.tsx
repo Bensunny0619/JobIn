@@ -67,7 +67,7 @@ export default function ApplicationForm({ onAdded }: Props) {
   return (
     <form
       onSubmit={handleSubmit}
-      className="bg-white rounded-2xl shadow-md p-6 space-y-6 border border-gray-200"
+      className="bg-white rounded-2xl shadow-md p-4 sm:p-6 space-y-6 border border-gray-200"
     >
       <h2 className="text-xl font-semibold text-gray-800">Add Job Application</h2>
 

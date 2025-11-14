@@ -201,22 +201,22 @@ export default function Dashboard() {
   return (
     <div className="min-h-screen bg-gray-50">
       <Toaster position="top-right" />
-      <div className="flex justify-between p-6 max-w-7xl mx-auto items-center">
+        <div className="flex flex-col sm:flex-row justify-between gap-4 p-6 max-w-7xl mx-auto items-center">
         <div className="flex gap-2">
-          <button onClick={() => setViewMode("grid")} className={`px-4 py-2 rounded transition ${viewMode === 'grid' ? 'bg-blue-600 text-white' : 'bg-white text-gray-700 border'}`}>Grid View</button>
-          <button onClick={() => setViewMode("kanban")} className={`px-4 py-2 rounded transition ${viewMode === 'kanban' ? 'bg-blue-600 text-white' : 'bg-white text-gray-700 border'}`}>Kanban View</button>
+          <button onClick={() => setViewMode("grid")} className={`px-4 py-2 rounded transition ${viewMode === 'grid' ? 'bg-blue-600 text-white' : 'bg-white text-gray-700 border'}`}>Grid</button>
+          <button onClick={() => setViewMode("kanban")} className={`px-4 py-2 rounded transition ${viewMode === 'kanban' ? 'bg-blue-600 text-white' : 'bg-white text-gray-700 border'}`}>Kanban</button>
           <button onClick={() => setViewMode("analytics")} className={`px-4 py-2 rounded transition ${viewMode === 'analytics' ? 'bg-blue-600 text-white' : 'bg-white text-gray-700 border'}`}>Analytics</button>
         </div>
         <button 
           onClick={handleExportCSV} 
-          className="bg-green-600 text-white px-4 py-2 rounded-md font-medium text-sm hover:bg-green-700 transition"
+          className="bg-green-600 text-white px-4 py-2 rounded-md font-medium text-sm hover:bg-green-700 transition w-full sm:w-auto"
         >
           Export to CSV
         </button>
       </div>
       <main className="p-6 pt-0 space-y-6 max-w-7xl mx-auto">
         {viewMode !== 'analytics' && (
-          <div className="bg-white rounded-2xl shadow-md p-6 border border-gray-200">
+          <div className="bg-white rounded-2xl shadow-md p-4 sm:p-6 border border-gray-200">
             <div className="flex justify-between items-center">
               <button 
                 onClick={() => setIsAddFormOpen(prev => !prev)} 
@@ -289,40 +289,43 @@ export default function Dashboard() {
             )}
             
             {viewMode === "kanban" && (
-              <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-                <div className="flex gap-4 overflow-x-auto pb-4 items-start">
-                  {statuses.map((status) => {
-                    const jobsInStatus = groupedJobs[status] || [];
-                    return (
-                      <DroppableColumn key={status} id={status} data={{ type: "column", columnId: status }}>
-                        <div className="flex flex-col gap-3 w-72">
-                          <h3 className="font-bold text-lg mb-2 capitalize px-1">{status} ({jobsInStatus.length})</h3>
-                           <SortableContext items={jobsInStatus.map(job => job.id.toString())} strategy={verticalListSortingStrategy}>
-                            {jobsInStatus.length > 0 ? (
-                              jobsInStatus.map((job) => (
-                                <DraggableCard 
-                                  key={job.id} 
-                                  job={job} 
-                                  onEdit={openEdit} 
-                                  onDelete={handleDelete} 
-                                  onApplyNow={handleApplyNow} 
-                                  onAnalyze={handleAnalyzeMatch} 
-                                />
-                              ))
-                            ) : (
-                              // --- FIX #2: THE EMPTY STATE FOR KANBAN COLUMNS ---
-                              <div className="p-4 text-center text-xs text-gray-400 border-2 border-dashed rounded-lg">
-                                Drag jobs here
-                              </div>
-                            )}
-                          </SortableContext>
-                        </div>
-                      </DroppableColumn>
-                    );
-                  })}
-                </div>
-              </DndContext>
-            )}
+  <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+    {/* --- THIS IS THE ONLY CHANGE --- */}
+    {/* Before: className="flex gap-4 overflow-x-auto ..." */}
+    {/* After: A grid on mobile, flexbox with horizontal scroll on larger screens. */}
+    <div className="grid grid-cols-1 md:grid-cols-none md:flex gap-4 md:overflow-x-auto pb-4 items-start">
+      {statuses.map((status) => {
+        const jobsInStatus = groupedJobs[status] || [];
+        return (
+          <DroppableColumn key={status} id={status} data={{ type: "column", columnId: status }}>
+            {/* The content of the column does not need to change */}
+            <div className="flex flex-col gap-3">
+              <h3 className="font-bold text-lg mb-2 capitalize px-1">{status} ({jobsInStatus.length})</h3>
+              <SortableContext items={jobsInStatus.map(job => job.id.toString())} strategy={verticalListSortingStrategy}>
+                {jobsInStatus.length > 0 ? (
+                  jobsInStatus.map((job) => (
+                    <DraggableCard 
+                      key={job.id} 
+                      job={job} 
+                      onEdit={openEdit} 
+                      onDelete={handleDelete} 
+                      onApplyNow={handleApplyNow} 
+                      onAnalyze={handleAnalyzeMatch} 
+                    />
+                  ))
+                ) : (
+                  <div className="p-4 text-center text-xs text-gray-400 border-2 border-dashed rounded-lg">
+                    Drag jobs here
+                  </div>
+                )}
+              </SortableContext>
+            </div>
+          </DroppableColumn>
+        );
+      })}
+    </div>
+  </DndContext>
+)}
             {viewMode === 'analytics' && <AnalyticsDashboard jobs={filteredJobs} />}
           </>
         )}

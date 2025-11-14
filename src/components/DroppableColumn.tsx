@@ -15,7 +15,7 @@ export default function DroppableColumn({
   return (
     <div
       ref={setNodeRef}
-      className={`rounded-xl p-4 min-w-[280px] flex-shrink-0 transition-colors ${
+      className={`rounded-xl p-4 w-full sm:w-72 flex-shrink-0 transition-colors ${
         isOver ? "bg-blue-100" : "bg-gray-100"
       }`}
     >

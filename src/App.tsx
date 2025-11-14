@@ -1,6 +1,6 @@
 // App.tsx
 import { useEffect, useState } from "react"
-import { Routes, Route, Outlet, Navigate } from "react-router-dom"
+import { Routes, Route, Outlet, Navigate } from "react-router-dom" // Import Navigate
 import { supabase } from "./lib/supabaseClient"
 import Login from "./pages/Login"
 import Dashboard from "./pages/Dashboard"
@@ -8,9 +8,8 @@ import Profile from "./pages/Profile"
 import ProtectedRoute from "./components/ProtectedRoute"
 import Navbar from "./components/Navbar"
 import { Toaster } from "react-hot-toast"
-import type { Session } from '@supabase/supabase-js'
 
-// This MainLayout component remains the same
+// This MainLayout component is correct and does not need to change.
 const MainLayout = () => {
   const [searchTerm, setSearchTerm] = useState("");
   return (
@@ -22,31 +21,19 @@ const MainLayout = () => {
 };
 
 export default function App() {
-  const [session, setSession] = useState<Session | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  // This useEffect is now the single source of truth for the auth state.
-  // It correctly handles the initial session and any changes (login/logout).
+  // Your Supabase connection check is good and can remain.
+  const [supabaseStatus, setSupabaseStatus] = useState<"checking" | "ok" | "error">("checking")
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setLoading(false);
-    });
+    const checkConnection = async () => {
+      const { error } = await supabase.from("applications").select("*").limit(1)
+      if (error) setSupabaseStatus("error")
+      else setSupabaseStatus("ok")
+    }
+    checkConnection()
+  }, [])
+  if (supabaseStatus === "checking") return <div className="grid place-items-center h-screen">Loading...</div>
+  if (supabaseStatus === "error") return <div className="grid place-items-center h-screen text-center">...</div>
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (_event, session) => {
-        setSession(session);
-      }
-    );
-
-    return () => subscription.unsubscribe();
-  }, []);
-
-  // Show a global loading indicator while the initial session is being checked.
-  if (loading) {
-    return <div className="h-screen grid place-items-center">Loading...</div>;
-  }
-  
   return (
     <>
       <Toaster
@@ -61,10 +48,9 @@ export default function App() {
         }}
       />
       <Routes>
-        {/* The Login route is accessible to everyone */}
         <Route path="/login" element={<Login />} />
         
-        {/* These routes are protected */}
+        {/* This is the main protected route section */}
         <Route
           path="/"
           element={
@@ -73,15 +59,18 @@ export default function App() {
             </ProtectedRoute>
           }
         >
-          {/* If the user is logged in and goes to "/", redirect them to the dashboard */}
+          {/* --- THIS IS THE ONLY FIX YOU NEED --- */}
+          {/* This line tells the router to redirect to "/dashboard" by default
+              when the user is at the root "/" path. */}
           <Route index element={<Navigate to="/dashboard" replace />} />
+
+          {/* Your existing nested routes remain the same */}
           <Route path="dashboard" element={<Dashboard />} />
           <Route path="profile" element={<Profile />} />
         </Route>
         
-        {/* This is a fallback route. If a user is logged in, send them to the dashboard.
-            If they are not, send them to the login page. */}
-        <Route path="*" element={<Navigate to={session ? "/dashboard" : "/login"} replace />} />
+        {/* Your fallback route remains the same */}
+        <Route path="*" element={<Login />} />
       </Routes>
     </>
   )

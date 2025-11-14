@@ -1,66 +1,52 @@
 // App.tsx
 import { useEffect, useState } from "react"
-import { Routes, Route, Outlet } from "react-router-dom" // Import Outlet
+import { Routes, Route, Outlet, Navigate } from "react-router-dom"
 import { supabase } from "./lib/supabaseClient"
 import Login from "./pages/Login"
 import Dashboard from "./pages/Dashboard"
-import Profile from "./pages/Profile" // Import Profile
+import Profile from "./pages/Profile"
 import ProtectedRoute from "./components/ProtectedRoute"
-import Navbar from "./components/Navbar" // Import Navbar
+import Navbar from "./components/Navbar"
 import { Toaster } from "react-hot-toast"
+import { Session } from '@supabase/supabase-js'
 
-// A layout component that includes the Navbar
+// This MainLayout component remains the same
 const MainLayout = () => {
-  // You might need to pass search state down if you keep it at the Dashboard level
-  // For now, let's simplify.
   const [searchTerm, setSearchTerm] = useState("");
   return (
     <div className="min-h-screen bg-gray-50">
       <Navbar searchTerm={searchTerm} onSearchChange={setSearchTerm} />
-      {/* The Outlet component will render the matched child route element */}
       <Outlet context={{ searchTerm, setSearchTerm }} /> 
     </div>
   );
 };
 
-
 export default function App() {
-  const [supabaseStatus, setSupabaseStatus] = useState<
-    "checking" | "ok" | "error"
-  >("checking")
+  const [session, setSession] = useState<Session | null>(null);
+  const [loading, setLoading] = useState(true);
 
+  // This useEffect is now the single source of truth for the auth state.
+  // It correctly handles the initial session and any changes (login/logout).
   useEffect(() => {
-    const checkConnection = async () => {
-      const { error } = await supabase.from("applications").select("*").limit(1)
-      if (error) {
-        console.error("❌ Supabase connection error:", error.message)
-        setSupabaseStatus("error")
-      } else {
-        setSupabaseStatus("ok")
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      setLoading(false);
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (_event, session) => {
+        setSession(session);
       }
-    }
-    checkConnection()
-  }, [])
+    );
 
-  if (supabaseStatus === "checking") {
-    return <div className="grid place-items-center h-screen">Loading...</div>
+    return () => subscription.unsubscribe();
+  }, []);
+
+  // Show a global loading indicator while the initial session is being checked.
+  if (loading) {
+    return <div className="h-screen grid place-items-center">Loading...</div>;
   }
-
-  if (supabaseStatus === "error") {
-    return (
-      <div className="grid place-items-center h-screen text-center">
-        <Toaster position="top-right" reverseOrder={false} />
-        <h1 className="text-xl font-bold text-red-600">
-          Supabase connection failed 🚨
-        </h1>
-        <p className="mt-2">
-          Check your <code>SUPABASE_URL</code> and{" "}
-          <code>SUPABASE_ANON_KEY</code> in <code>lib/supabase.ts</code>.
-        </p>
-      </div>
-    )
-  }
-
+  
   return (
     <>
       <Toaster
@@ -75,7 +61,10 @@ export default function App() {
         }}
       />
       <Routes>
+        {/* The Login route is accessible to everyone */}
         <Route path="/login" element={<Login />} />
+        
+        {/* These routes are protected */}
         <Route
           path="/"
           element={
@@ -84,11 +73,15 @@ export default function App() {
             </ProtectedRoute>
           }
         >
-          {/* Nested routes will render inside MainLayout's Outlet */}
+          {/* If the user is logged in and goes to "/", redirect them to the dashboard */}
+          <Route index element={<Navigate to="/dashboard" replace />} />
           <Route path="dashboard" element={<Dashboard />} />
           <Route path="profile" element={<Profile />} />
         </Route>
-        <Route path="*" element={<Login />} />
+        
+        {/* This is a fallback route. If a user is logged in, send them to the dashboard.
+            If they are not, send them to the login page. */}
+        <Route path="*" element={<Navigate to={session ? "/dashboard" : "/login"} replace />} />
       </Routes>
     </>
   )

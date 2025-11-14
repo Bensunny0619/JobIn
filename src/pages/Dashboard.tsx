@@ -8,7 +8,8 @@ import AnalyticsDashboard from "../components/AnalyticsDashboard"
 import JobSearchModal from "../components/JobSearchModal"
 import { useOutletContext } from "react-router-dom";
 import Papa from 'papaparse';
-import EmptyState from "../components/EmptyState"; // <-- You already have this
+import EmptyState from "../components/EmptyState";
+import { ChevronDown } from 'lucide-react'; // Icon for the toggle button
 
 import { DndContext, useSensor, useSensors, PointerSensor, closestCenter } from "@dnd-kit/core"
 import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable"
@@ -24,7 +25,7 @@ type Job = {
   status: string
   date_applied: string
   job_url?: string | null;
-  interview_date?: string | null; 
+  interview_date?: string | null;
   match_analysis?: any | null;
 }
 
@@ -38,11 +39,14 @@ export default function Dashboard() {
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const [viewMode, setViewMode] = useState<"grid" | "kanban" | "analytics">("grid")
   const [expandedJobId, setExpandedJobId] = useState<string | null>(null)
-  const [isJobSearchOpen, setIsJobSearchOpen] = useState(false); 
+  const [isJobSearchOpen, setIsJobSearchOpen] = useState(false);
   const [isMatchModalOpen, setIsMatchModalOpen] = useState(false);
   const [selectedJobForAnalysis, setSelectedJobForAnalysis] = useState<Job | null>(null);
   const [isAnalyzingMatch, setIsAnalyzingMatch] = useState(false);
   const { searchTerm } = useOutletContext<AppContext>();
+  
+  // --- NEW STATE FOR COLLAPSIBLE FORM ---
+  const [isAddFormOpen, setIsAddFormOpen] = useState(false);
 
   function toggleNotes(jobId: string) {
     setExpandedJobId((prev) => (prev === jobId ? null : jobId))
@@ -213,26 +217,45 @@ export default function Dashboard() {
       <main className="p-6 pt-0 space-y-6 max-w-7xl mx-auto">
         {viewMode !== 'analytics' && (
           <div className="bg-white rounded-2xl shadow-md p-6 border border-gray-200">
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-xl font-semibold text-gray-800">Add Job Application</h2>
+            <div className="flex justify-between items-center">
               <button 
-                onClick={() => setIsJobSearchOpen(true)}
-                className="bg-green-600 text-white px-4 py-2 rounded-md font-medium hover:bg-green-700 transition"
+                onClick={() => setIsAddFormOpen(prev => !prev)} 
+                className="w-full flex justify-between items-center text-left"
               >
-                Find Jobs Online
+                <h2 className="text-xl font-semibold text-gray-800">Add Job Application</h2>
+                <div className="flex items-center gap-4">
+                  <span className="text-sm text-gray-500">{isAddFormOpen ? 'Collapse' : 'Expand'}</span>
+                  <ChevronDown 
+                    className={`text-gray-500 transition-transform duration-300 ${isAddFormOpen ? 'rotate-180' : ''}`} 
+                  />
+                </div>
               </button>
             </div>
-            <ApplicationForm onAdded={fetchJobs} />
+            
+            {isAddFormOpen && (
+              <div className="mt-6 border-t pt-6">
+                <div className="flex justify-end mb-4">
+                  <button 
+                    onClick={() => setIsJobSearchOpen(true)}
+                    className="bg-purple-600 text-white px-4 py-2 rounded-md font-medium hover:bg-purple-700 transition"
+                  >
+                    Find Jobs Online
+                  </button>
+                </div>
+                <ApplicationForm onAdded={() => {
+                  fetchJobs();
+                  setIsAddFormOpen(false); // Close form after successfully adding a job
+                }} />
+              </div>
+            )}
           </div>
         )}
         
         {loading ? (
           <p className="text-center">Loading applications...</p>
         ) : jobs.length === 0 ? (
-          // --- FIX #1: USE THE EMPTYSTATE COMPONENT ---
           <EmptyState message="No applications yet" details="Add your first job application above to get started!" />
         ) : filteredJobs.length === 0 ? (
-          // --- FIX #1: USE THE EMPTYSTATE COMPONENT ---
           <EmptyState message="No applications match your search" details="Try a different company or position." />
         ) : (
           <>
@@ -240,7 +263,6 @@ export default function Dashboard() {
               <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"> 
                 {filteredJobs.map((job) => (
                   <div key={job.id} className="bg-white rounded-xl shadow p-4 space-y-2 border border-gray-100 w-full">
-                     {/* ... your existing grid view card content ... */}
                      <h2 className="font-semibold text-lg text-gray-800">{job.position}</h2> 
                      <p className="text-sm text-gray-600">{job.company}</p> 
                      <span className={`inline-block px-3 py-1 text-sm rounded-full font-medium ${ job.status === "saved" ? "bg-yellow-100 text-yellow-700" :job.status === "applied" ? "bg-blue-100 text-blue-600" : job.status === "interview" ? "bg-green-100 text-green-600" : job.status === "offer" ? "bg-purple-100 text-purple-600" : "bg-red-100 text-red-600"}`}> {job.status.charAt(0).toUpperCase() + job.status.slice(1)} </span> 
@@ -270,13 +292,12 @@ export default function Dashboard() {
               <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
                 <div className="flex gap-4 overflow-x-auto pb-4 items-start">
                   {statuses.map((status) => {
-                    // --- FIX #2: DEFINE jobsInStatus HERE ---
                     const jobsInStatus = groupedJobs[status] || [];
                     return (
                       <DroppableColumn key={status} id={status} data={{ type: "column", columnId: status }}>
                         <div className="flex flex-col gap-3 w-72">
                           <h3 className="font-bold text-lg mb-2 capitalize px-1">{status} ({jobsInStatus.length})</h3>
-                          <SortableContext items={jobsInStatus.map(job => job.id.toString())} strategy={verticalListSortingStrategy}>
+                           <SortableContext items={jobsInStatus.map(job => job.id.toString())} strategy={verticalListSortingStrategy}>
                             {jobsInStatus.length > 0 ? (
                               jobsInStatus.map((job) => (
                                 <DraggableCard 

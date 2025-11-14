@@ -47,12 +47,10 @@ export default function JobSearchModal({ isOpen, onClose, onJobSaved }: Props) {
         const rawData = await response.json();
         data = rawData.slice(1);
       } else {
-        // This is the single, correct block for calling the Edge Function
         const { data: functionData, error: functionError } = await supabase.functions.invoke(
           'job-search',
           { body: { searchTerm } }
         );
-
         if (functionError) {
           const errorMessage = functionError.context?.msg || functionError.message;
           throw new Error(errorMessage);
@@ -60,7 +58,6 @@ export default function JobSearchModal({ isOpen, onClose, onJobSaved }: Props) {
         data = functionData.jobs;
       }
       setResults(data);
-
     } catch (err: any) {
       setError(`Failed to fetch jobs: ${err.message}`);
       console.error(err);
@@ -69,11 +66,12 @@ export default function JobSearchModal({ isOpen, onClose, onJobSaved }: Props) {
     }
   };
 
+  // Run initial search when modal opens
   useEffect(() => {
     if (isOpen) {
       handleSearch();
     }
-  }, [isOpen, source]);
+  }, [isOpen]);
 
   const handleSaveJob = async (job: RemoteJob) => {
     setSavingId(job.id);
@@ -98,6 +96,9 @@ export default function JobSearchModal({ isOpen, onClose, onJobSaved }: Props) {
       toast.error(error.message);
     } else {
       toast.success(`${job.position} at ${job.company} saved!`);
+      // --- THIS IS THE FIX ---
+      // We still call onJobSaved to refetch data in the background,
+      // but we no longer close the modal automatically.
       onJobSaved();
     }
     setSavingId(null);
@@ -131,32 +132,35 @@ export default function JobSearchModal({ isOpen, onClose, onJobSaved }: Props) {
               </button>
             </form>
           </div>
-
           <div className="flex-1 p-6 overflow-y-auto">
             {loading && <p className="text-center">Loading...</p>}
             {error && <p className="text-center text-red-500">{error}</p>}
             {!loading && !error && (
               <ul className="space-y-4">
-                {results.map((job) => (
-                  <li key={job.id} className="p-4 border rounded-lg flex justify-between items-center">
-                    <div>
-                      <h3 className="font-semibold">{job.position}</h3>
-                      <p className="text-sm text-gray-600">{job.company} - <span className="text-gray-500">{job.location || 'Remote'}</span></p>
-                      <div className="flex gap-1 mt-2">
-                        {job.tags.slice(0, 3).map(tag => (
-                          <span key={tag} className="text-xs bg-gray-200 text-gray-700 px-2 py-0.5 rounded-full">{tag}</span>
-                        ))}
+                {results.length === 0 ? (
+                  <p className="text-center text-gray-500">No jobs found for "{searchTerm}". Try a different search term.</p>
+                ) : (
+                  results.map((job) => (
+                    <li key={job.id} className="p-4 border rounded-lg flex justify-between items-center">
+                      <div>
+                        <h3 className="font-semibold">{job.position}</h3>
+                        <p className="text-sm text-gray-600">{job.company} - <span className="text-gray-500">{job.location || 'Remote'}</span></p>
+                        <div className="flex gap-1 mt-2">
+                          {job.tags?.slice(0, 3).map(tag => (
+                            <span key={tag} className="text-xs bg-gray-200 text-gray-700 px-2 py-0.5 rounded-full">{tag}</span>
+                          ))}
+                        </div>
                       </div>
-                    </div>
-                    <button
-                      onClick={() => handleSaveJob(job)}
-                      disabled={savingId === job.id}
-                      className="bg-green-600 text-white text-sm px-3 py-1.5 rounded-md hover:bg-green-700 disabled:opacity-50"
-                    >
-                      {savingId === job.id ? 'Saving...' : 'Save'}
-                    </button>
-                  </li>
-                ))}
+                      <button
+                        onClick={() => handleSaveJob(job)}
+                        disabled={savingId === job.id}
+                        className="bg-green-600 text-white text-sm px-3 py-1.5 rounded-md hover:bg-green-700 disabled:opacity-50"
+                      >
+                        {savingId === job.id ? 'Saving...' : 'Save'}
+                      </button>
+                    </li>
+                  ))
+                )}
               </ul>
             )}
           </div>

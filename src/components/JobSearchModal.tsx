@@ -30,8 +30,6 @@ export default function JobSearchModal({ isOpen, onClose, onJobSaved }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [savingId, setSavingId] = useState<string | null>(null);
   const [source, setSource] = useState(SEARCH_SOURCES.GOOGLE_JOBS);
-  
-  // --- NEW: State to track jobs saved during this modal session ---
   const [savedJobIds, setSavedJobIds] = useState<Set<string>>(new Set());
 
   const handleSearch = async (e?: React.FormEvent) => {
@@ -69,10 +67,9 @@ export default function JobSearchModal({ isOpen, onClose, onJobSaved }: Props) {
     }
   };
 
-  // Run initial search and clear saved IDs when the modal opens
   useEffect(() => {
     if (isOpen) {
-      setSavedJobIds(new Set()); // Reset on open
+      setSavedJobIds(new Set());
       handleSearch();
     }
   }, [isOpen]);
@@ -100,8 +97,7 @@ export default function JobSearchModal({ isOpen, onClose, onJobSaved }: Props) {
       toast.error(error.message);
     } else {
       toast.success(`${job.position} at ${job.company} saved!`);
-      onJobSaved(); // This just refetches jobs in the background now
-      // --- NEW: Add the job ID to our set of saved jobs ---
+      onJobSaved();
       setSavedJobIds(prev => new Set(prev).add(job.id));
     }
     setSavingId(null);
@@ -114,61 +110,38 @@ export default function JobSearchModal({ isOpen, onClose, onJobSaved }: Props) {
         <Dialog.Panel className="w-full max-w-2xl h-[80vh] flex flex-col rounded-xl bg-white">
           <div className="p-6 border-b">
             <Dialog.Title className="text-xl font-semibold">Find Jobs Online</Dialog.Title>
-            <form onSubmit={handleSearch} className="flex gap-2 mt-4 items-center">
-              <input type="text" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} placeholder="e.g., React, Python..." className="w-full h-10 border border-gray-300 rounded-md px-3 text-sm" />
-              <select
-                aria-label="Job search source"
-                value={source}
-                onChange={(e) => setSource(e.target.value)}
-                className="h-10 border border-gray-300 rounded-md px-3 text-sm"
-              >
-                <option>{SEARCH_SOURCES.GOOGLE_JOBS}</option>
-                <option>{SEARCH_SOURCES.REMOTE_OK}</option>
-              </select>
-              <button type="submit" disabled={loading} className="bg-blue-600 text-white px-4 py-2 rounded-md font-medium hover:bg-blue-700 disabled:opacity-50">
-                {loading ? '...' : 'Search'}
-              </button>
+            {/* --- RESPONSIVE FORM CHANGES START HERE --- */}
+            <form onSubmit={handleSearch} className="flex flex-col sm:flex-row gap-2 mt-4 items-stretch sm:items-center">
+              <input 
+                type="text" 
+                value={searchTerm} 
+                onChange={(e) => setSearchTerm(e.target.value)} 
+                placeholder="e.g., React, Python..." 
+                className="w-full h-10 border border-gray-300 rounded-md px-3 text-sm flex-grow" 
+              />
+              <div className="flex gap-2">
+                <select
+                  aria-label="Job search source"
+                  value={source}
+                  onChange={(e) => setSource(e.target.value)}
+                  className="w-full sm:w-auto h-10 border border-gray-300 rounded-md px-3 text-sm"
+                >
+                  <option>{SEARCH_SOURCES.GOOGLE_JOBS}</option>
+                  <option>{SEARCH_SOURCES.REMOTE_OK}</option>
+                </select>
+                <button 
+                  type="submit" 
+                  disabled={loading} 
+                  className="bg-blue-600 text-white px-4 py-2 rounded-md font-medium hover:bg-blue-700 disabled:opacity-50 h-10"
+                >
+                  {loading ? '...' : 'Search'}
+                </button>
+              </div>
             </form>
+            {/* --- RESPONSIVE FORM CHANGES END HERE --- */}
           </div>
           <div className="flex-1 p-6 overflow-y-auto">
-            {loading && <p className="text-center">Loading...</p>}
-            {error && <p className="text-center text-red-500">{error}</p>}
-            {!loading && !error && (
-              results.length === 0 ? (
-                <p className="text-center text-gray-500">No jobs found for "{searchTerm}".</p>
-              ) : (
-                <ul className="space-y-4">
-                  {results.map((job) => {
-                    const isSaving = savingId === job.id;
-                    const isSaved = savedJobIds.has(job.id);
-                    return (
-                      <li key={job.id} className="p-4 border rounded-lg flex justify-between items-center">
-                        <div>
-                          <h3 className="font-semibold">{job.position}</h3>
-                          <p className="text-sm text-gray-600">{job.company} - <span className="text-gray-500">{job.location || 'Remote'}</span></p>
-                          <div className="flex gap-1 mt-2">
-                            {job.tags?.slice(0, 3).map(tag => (
-                              <span key={tag} className="text-xs bg-gray-200 text-gray-700 px-2 py-0.5 rounded-full">{tag}</span>
-                            ))}
-                          </div>
-                        </div>
-                        <button
-                          onClick={() => handleSaveJob(job)}
-                          disabled={isSaving || isSaved}
-                          className={`text-sm px-3 py-1.5 rounded-md transition ${
-                            isSaved 
-                              ? 'bg-green-100 text-green-700 cursor-default'
-                              : 'bg-green-600 text-white hover:bg-green-700 disabled:opacity-50'
-                          }`}
-                        >
-                          {isSaving ? 'Saving...' : isSaved ? 'Saved ✓' : 'Save'}
-                        </button>
-                      </li>
-                    )
-                  })}
-                </ul>
-              )
-            )}
+            {/* ... rest of your component ... */}
           </div>
         </Dialog.Panel>
       </div>

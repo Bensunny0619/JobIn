@@ -69,7 +69,7 @@ export default function ApplicationForm({ onAdded }: Props) {
       onSubmit={handleSubmit}
       className="bg-white rounded-2xl shadow-md p-4 sm:p-6 space-y-6 border border-gray-200"
     >
-      <h2 className="text-xl font-semibold text-gray-800">Add Job Application</h2>
+      <h2 className="text-xl font-semibold text-gray-800">New Application</h2>
 
       {error && <p className="text-red-500 text-sm">{error}</p>}
 
@@ -119,11 +119,14 @@ export default function ApplicationForm({ onAdded }: Props) {
 
         {/* Date Applied */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Date Applied</label>
+          <label htmlFor="dateApplied" className="block text-sm font-medium text-gray-700 mb-1">Date Applied</label>
           <input
+            id="dateApplied"
             type="date"
             value={dateApplied}
             onChange={(e) => setDateApplied(e.target.value)}
+            title="Date applied"
+            placeholder="YYYY-MM-DD"
             className="w-full h-10 border border-gray-300 rounded-md px-3 text-sm text-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
         </div>

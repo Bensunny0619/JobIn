@@ -240,11 +240,13 @@ export default function Dashboard() {
               <div className="mt-6 border-t pt-6">
                 <div className="flex justify-end mb-4">
                   <button 
-                    onClick={() => setIsJobSearchOpen(true)}
-                    className="bg-purple-600 text-white px-4 py-2 rounded-md font-medium hover:bg-purple-700 transition"
-                  >
-                    Find Jobs Online
-                  </button>
+    onClick={() => setIsJobSearchOpen(true)}
+    className="bg-blue-600 text-white font-medium rounded-md hover:bg-blue-700 transition 
+               px-3 py-1.5 text-sm 
+               sm:px-4 sm:py-2 sm:text-base"
+>
+    Find Jobs Online
+</button>
                 </div>
                 <ApplicationForm onAdded={() => {
                   fetchJobs();

@@ -46,7 +46,12 @@ export default function JobSearchModal({ isOpen, onClose, onJobSaved }: Props) {
         const response = await fetch(`https://remoteok.com/api?tag=${searchTerm}`);
         if (!response.ok) throw new Error("Network response was not ok.");
         const rawData = await response.json();
-        data = rawData.slice(1);
+        // The first item in the RemoteOK API response is not a job, so we slice it.
+        data = rawData.slice(1).map((job: any) => ({
+          ...job,
+          // Ensure there's a unique id for each job for key and saving purposes
+          id: job.id || `${job.company}-${job.position}-${job.date}` 
+        }));
       } else {
         const { data: functionData, error: functionError } = await supabase.functions.invoke(
           'job-search',
@@ -56,7 +61,10 @@ export default function JobSearchModal({ isOpen, onClose, onJobSaved }: Props) {
           const errorMessage = functionError.context?.msg || functionError.message;
           throw new Error(errorMessage);
         }
-        data = functionData.jobs;
+        data = functionData.jobs.map((job: any) => ({
+          ...job,
+          id: job.job_id // Ensure a consistent 'id' field
+        }));
       }
       setResults(data);
     } catch (err: unknown) {
@@ -69,8 +77,11 @@ export default function JobSearchModal({ isOpen, onClose, onJobSaved }: Props) {
 
   useEffect(() => {
     if (isOpen) {
+      // Reset state when the modal opens
       setSavedJobIds(new Set());
-      handleSearch();
+      setResults([]);
+      setError(null);
+      handleSearch(); // Perform an initial search
     }
   }, [isOpen]);
 
@@ -110,7 +121,6 @@ export default function JobSearchModal({ isOpen, onClose, onJobSaved }: Props) {
         <Dialog.Panel className="w-full max-w-2xl h-[80vh] flex flex-col rounded-xl bg-white">
           <div className="p-6 border-b">
             <Dialog.Title className="text-xl font-semibold">Find Jobs Online</Dialog.Title>
-            {/* --- RESPONSIVE FORM CHANGES START HERE --- */}
             <form onSubmit={handleSearch} className="flex flex-col sm:flex-row gap-2 mt-4 items-stretch sm:items-center">
               <input 
                 type="text" 
@@ -138,11 +148,43 @@ export default function JobSearchModal({ isOpen, onClose, onJobSaved }: Props) {
                 </button>
               </div>
             </form>
-            {/* --- RESPONSIVE FORM CHANGES END HERE --- */}
           </div>
+          {/* --- UI FOR RESULTS, ERRORS, and SAVING START HERE --- */}
           <div className="flex-1 p-6 overflow-y-auto">
-            {/* ... rest of your component ... */}
+            {error && <p className="text-red-500 text-center">{error}</p>}
+            
+            {results.length > 0 && (
+              <ul className="space-y-4">
+                {results.map((job) => (
+                  <li key={job.id} className="p-4 border rounded-lg flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                    <div className="flex-1">
+                      <a href={job.url} target="_blank" rel="noopener noreferrer" className="hover:underline">
+                        <h3 className="font-semibold text-lg">{job.position}</h3>
+                      </a>
+                      <p className="text-gray-700">{job.company}</p>
+                      <p className="text-gray-500 text-sm">{job.location}</p>
+                    </div>
+                    <button
+                      onClick={() => handleSaveJob(job)}
+                      disabled={savingId === job.id || savedJobIds.has(job.id)}
+                      className="w-full sm:w-auto bg-green-500 text-white px-4 py-2 rounded-md font-medium hover:bg-green-600 disabled:opacity-50 disabled:bg-gray-400"
+                    >
+                      {savedJobIds.has(job.id)
+                        ? 'Saved'
+                        : savingId === job.id
+                        ? 'Saving...'
+                        : 'Save'}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+            
+            {!loading && !error && results.length === 0 && (
+              <p className="text-center text-gray-500 mt-8">No jobs found. Try another search term.</p>
+            )}
           </div>
+          {/* --- UI FOR RESULTS, ERRORS, and SAVING END HERE --- */}
         </Dialog.Panel>
       </div>
     </Dialog>

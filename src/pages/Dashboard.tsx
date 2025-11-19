@@ -45,7 +45,6 @@ export default function Dashboard() {
   const [isAnalyzingMatch, setIsAnalyzingMatch] = useState(false);
   const { searchTerm } = useOutletContext<AppContext>();
   
-  // --- NEW STATE FOR COLLAPSIBLE FORM ---
   const [isAddFormOpen, setIsAddFormOpen] = useState(false);
 
   function toggleNotes(jobId: string) {
@@ -240,17 +239,15 @@ export default function Dashboard() {
               <div className="mt-6 border-t pt-6">
                 <div className="flex justify-end mb-4">
                   <button 
-    onClick={() => setIsJobSearchOpen(true)}
-    className="bg-blue-600 text-white font-medium rounded-md hover:bg-blue-700 transition 
-               px-3 py-1.5 text-sm 
-               sm:px-4 sm:py-2 sm:text-base"
->
-    Find Jobs Online
-</button>
+                    onClick={() => setIsJobSearchOpen(true)}
+                    className="bg-blue-600 text-white font-medium rounded-md hover:bg-blue-700 transition px-3 py-1.5 text-sm sm:px-4 sm:py-2 sm:text-base"
+                  >
+                    Find Jobs Online
+                  </button>
                 </div>
                 <ApplicationForm onAdded={() => {
                   fetchJobs();
-                  setIsAddFormOpen(false); // Close form after successfully adding a job
+                  setIsAddFormOpen(false);
                 }} />
               </div>
             )}
@@ -268,26 +265,39 @@ export default function Dashboard() {
             {viewMode === 'grid' && ( 
               <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"> 
                 {filteredJobs.map((job) => (
-                  <div key={job.id} className="bg-white rounded-xl shadow p-4 space-y-2 border border-gray-100 w-full">
-                     <h2 className="font-semibold text-lg text-gray-800">{job.position}</h2> 
-                     <p className="text-sm text-gray-600">{job.company}</p> 
-                     <span className={`inline-block px-3 py-1 text-sm rounded-full font-medium ${ job.status === "saved" ? "bg-yellow-100 text-yellow-700" :job.status === "applied" ? "bg-blue-100 text-blue-600" : job.status === "interview" ? "bg-green-100 text-green-600" : job.status === "offer" ? "bg-purple-100 text-purple-600" : "bg-red-100 text-red-600"}`}> {job.status.charAt(0).toUpperCase() + job.status.slice(1)} </span> 
-                     <p className="text-xs text-gray-400">Applied on: {job.date_applied}</p> 
+                  <div key={job.id} className="bg-white rounded-xl shadow p-4 space-y-2 border border-gray-100 w-full flex flex-col">
+                     <div className="flex-grow">
+                        <h2 className="font-semibold text-lg text-gray-800">{job.position}</h2> 
+                        <p className="text-sm text-gray-600">{job.company}</p> 
+                        <span className={`inline-block px-3 py-1 text-sm rounded-full font-medium ${ job.status === "saved" ? "bg-yellow-100 text-yellow-700" :job.status === "applied" ? "bg-blue-100 text-blue-600" : job.status === "interview" ? "bg-green-100 text-green-600" : job.status === "offer" ? "bg-purple-100 text-purple-600" : "bg-red-100 text-red-600"}`}> {job.status.charAt(0).toUpperCase() + job.status.slice(1)} </span> 
+                        <p className="text-xs text-gray-400 mt-1">Applied on: {job.date_applied}</p> 
+                     </div>
+                     {/* --- BUTTON LOGIC UPDATED START --- */}
                      <div className="pt-2">
-                      {job.status === 'saved' ? (
-                        <button onClick={() => handleApplyNow(job)} className="w-full bg-green-600 text-white px-3 py-1.5 rounded-md text-sm font-semibold hover:bg-green-700 transition">Apply Now</button>
-                      ) : (
+                        {job.status === 'saved' && (
+                          <button onClick={() => handleApplyNow(job)} className="w-full bg-green-600 text-white px-3 py-1.5 rounded-md text-sm font-semibold hover:bg-green-700 transition mb-2">
+                            Apply Now
+                          </button>
+                        )}
                         <div className="flex justify-between items-center">
-                          <button onClick={() => openEdit(job)} className="text-sm text-blue-600 hover:underline">Edit</button>
-                          <button onClick={() => handleDelete(job.id)} disabled={deletingId === job.id} className="text-sm text-red-600 hover:underline disabled:opacity-50">
-                            {deletingId === job.id ? "Deleting..." : "Delete"}
-                          </button>
-                          <button onClick={() => toggleNotes(job.id)} className="text-xs text-gray-600 hover:text-gray-800">
-                            {expandedJobId === job.id ? "Hide Notes" : "Show Notes"}
-                          </button>
+                          {job.status !== 'saved' ? (
+                            <button onClick={() => openEdit(job)} className="text-sm text-blue-600 hover:underline">
+                              Edit
+                            </button>
+                          ) : (
+                            <div /> /* Spacer to push other buttons to the right */
+                          )}
+                          <div className="flex items-center gap-4">
+                            <button onClick={() => handleDelete(job.id)} disabled={deletingId === job.id} className="text-sm text-red-600 hover:underline disabled:opacity-50">
+                              {deletingId === job.id ? "Deleting..." : "Delete"}
+                            </button>
+                            <button onClick={() => toggleNotes(job.id)} className="text-xs text-gray-600 hover:text-gray-800">
+                              {expandedJobId === job.id ? "Hide Notes" : "Show Notes"}
+                            </button>
+                          </div>
                         </div>
-                      )}
-                    </div>
+                      </div>
+                      {/* --- BUTTON LOGIC UPDATED END --- */}
                     {expandedJobId === job.id && <Notes applicationId={job.id} />}
                   </div>
                 ))}
@@ -295,43 +305,39 @@ export default function Dashboard() {
             )}
             
             {viewMode === "kanban" && (
-  <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-    {/* --- THIS IS THE ONLY CHANGE --- */}
-    {/* Before: className="flex gap-4 overflow-x-auto ..." */}
-    {/* After: A grid on mobile, flexbox with horizontal scroll on larger screens. */}
-    <div className="grid grid-cols-1 md:grid-cols-none md:flex gap-4 md:overflow-x-auto pb-4 items-start">
-      {statuses.map((status) => {
-        const jobsInStatus = groupedJobs[status] || [];
-        return (
-          <DroppableColumn key={status} id={status} data={{ type: "column", columnId: status }}>
-            {/* The content of the column does not need to change */}
-            <div className="flex flex-col gap-3">
-              <h3 className="font-bold text-lg mb-2 capitalize px-1">{status} ({jobsInStatus.length})</h3>
-              <SortableContext items={jobsInStatus.map(job => job.id.toString())} strategy={verticalListSortingStrategy}>
-                {jobsInStatus.length > 0 ? (
-                  jobsInStatus.map((job) => (
-                    <DraggableCard 
-                      key={job.id} 
-                      job={job} 
-                      onEdit={openEdit} 
-                      onDelete={handleDelete} 
-                      onApplyNow={handleApplyNow} 
-                      onAnalyze={handleAnalyzeMatch} 
-                    />
-                  ))
-                ) : (
-                  <div className="p-4 text-center text-xs text-gray-400 border-2 border-dashed rounded-lg">
-                    Drag jobs here
-                  </div>
-                )}
-              </SortableContext>
-            </div>
-          </DroppableColumn>
-        );
-      })}
-    </div>
-  </DndContext>
-)}
+              <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+                <div className="grid grid-cols-1 md:grid-cols-none md:flex gap-4 md:overflow-x-auto pb-4 items-start">
+                  {statuses.map((status) => {
+                    const jobsInStatus = groupedJobs[status] || [];
+                    return (
+                      <DroppableColumn key={status} id={status} data={{ type: "column", columnId: status }}>
+                        <div className="flex flex-col gap-3">
+                          <h3 className="font-bold text-lg mb-2 capitalize px-1">{status} ({jobsInStatus.length})</h3>
+                          <SortableContext items={jobsInStatus.map(job => job.id.toString())} strategy={verticalListSortingStrategy}>
+                            {jobsInStatus.length > 0 ? (
+                              jobsInStatus.map((job) => (
+                                <DraggableCard 
+                                  key={job.id} 
+                                  job={job} 
+                                  onEdit={openEdit} 
+                                  onDelete={handleDelete} 
+                                  onApplyNow={handleApplyNow} 
+                                  onAnalyze={handleAnalyzeMatch} 
+                                />
+                              ))
+                            ) : (
+                              <div className="p-4 text-center text-xs text-gray-400 border-2 border-dashed rounded-lg">
+                                Drag jobs here
+                              </div>
+                            )}
+                          </SortableContext>
+                        </div>
+                      </DroppableColumn>
+                    );
+                  })}
+                </div>
+              </DndContext>
+            )}
             {viewMode === 'analytics' && <AnalyticsDashboard jobs={filteredJobs} />}
           </>
         )}
@@ -340,7 +346,7 @@ export default function Dashboard() {
           <JobSearchModal 
             isOpen={isJobSearchOpen} 
             onClose={() => setIsJobSearchOpen(false)} 
-            onJobSaved={fetchJobs} // This now ONLY refetches jobs
+            onJobSaved={fetchJobs}
           /> 
         )}
 

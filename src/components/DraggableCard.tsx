@@ -3,7 +3,7 @@ import { useSortable } from "@dnd-kit/sortable"
 import { CSS } from "@dnd-kit/utilities"
 import Notes from "../components/Notes"
 import { format } from 'date-fns'
-import toast from 'react-hot-toast' // <-- Import toast
+import toast from 'react-hot-toast'
 
 type Job = {
   id: string
@@ -12,16 +12,16 @@ type Job = {
   status: string
   date_applied: string
   job_url?: string | null;
-  interview_date?: string | null; // <-- ADD THIS FIELD
-  match_analysis?: any | null;
+  interview_date?: string | null;
+  match_analysis?: unknown | null;
 }
 
 type Props = {
   job: Job
   onEdit: (job: Job) => void
   onDelete: (id: string) => void
-  onApplyNow: (job: Job) => void; 
-  onAnalyze: (job: Job) => void; 
+  onApplyNow: (job: Job) => void;
+  onAnalyze: (job: Job) => void;
 }
 
 export default function DraggableCard({ job, onEdit, onDelete, onApplyNow, onAnalyze }: Props) {
@@ -35,7 +35,6 @@ export default function DraggableCard({ job, onEdit, onDelete, onApplyNow, onAna
 
   const [showNotes, setShowNotes] = useState(false)
 
-  // --- This function now lives INSIDE the component ---
   function handleSchedule() {
     if (!job.interview_date) {
         toast.error("Please set an interview date first by editing the job.");
@@ -43,11 +42,8 @@ export default function DraggableCard({ job, onEdit, onDelete, onApplyNow, onAna
     }
 
     const startTime = new Date(job.interview_date);
-    // Assume the interview is 1 hour long
     const endTime = new Date(startTime.getTime() + 60 * 60 * 1000);
 
-    // Format dates for Google Calendar URL (YYYYMMDDTHHMMSSZ)
-    // We need to be careful about timezones, so we format without the 'Z'
     const gCalStartTime = format(startTime, "yyyyMMdd'T'HHmmss");
     const gCalEndTime = format(endTime, "yyyyMMdd'T'HHmmss");
 
@@ -87,21 +83,29 @@ export default function DraggableCard({ job, onEdit, onDelete, onApplyNow, onAna
         </p>
       </div>
 
-      {/* Action Buttons */}
+      {/* --- ACTION BUTTONS LOGIC UPDATED START --- */}
       <div className="pt-2">
         {job.status === 'saved' ? (
-          <button
-            onClick={() => onApplyNow(job)}
-            className="w-full bg-green-600 text-white px-3 py-1.5 rounded-md text-xs font-semibold hover:bg-green-700 transition"
-          >
-            Apply Now
-          </button>
+          <div>
+            <button
+              onClick={() => onApplyNow(job)}
+              className="w-full bg-green-600 text-white px-3 py-1.5 rounded-md text-xs font-semibold hover:bg-green-700 transition mb-2"
+            >
+              Apply Now
+            </button>
+            <div className="flex justify-end items-center gap-3">
+              <button onClick={() => onAnalyze(job)} className="text-xs text-green-600 hover:underline">Analyze</button>
+              <button onClick={() => onDelete(job.id)} className="text-xs text-red-600 hover:underline">Delete</button>
+              <button onClick={() => setShowNotes((prev) => !prev)} className="text-xs text-gray-600 hover:text-gray-800">
+                {showNotes ? "Hide Notes" : "Show Notes"}
+              </button>
+            </div>
+          </div>
         ) : (
           <div className="flex justify-between items-center flex-wrap gap-2">
             <button onClick={() => onEdit(job)} className="text-xs text-blue-600 hover:underline">Edit</button>
             <button onClick={() => onAnalyze(job)} className="text-xs text-green-600 hover:underline">Analyze</button>
             
-            {/* --- The "Schedule" button is now correctly placed here --- */}
             {job.status === 'interview' && (
               <button onClick={handleSchedule} className="text-xs text-purple-600 hover:underline">Schedule</button>
             )}
@@ -113,6 +117,7 @@ export default function DraggableCard({ job, onEdit, onDelete, onApplyNow, onAna
           </div>
         )}
       </div>
+      {/* --- ACTION BUTTONS LOGIC UPDATED END --- */}
 
       {/* Collapsible Notes */}
       {showNotes && (

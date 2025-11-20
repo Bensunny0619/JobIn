@@ -93,8 +93,10 @@ export default function EditJobModal({ job, onClose, onUpdated }: Props) {
               type="text"
               value={company}
               onChange={(e) => setCompany(e.target.value)}
-              className="w-full h-10 text-gray-800 border border-gray-300 rounded-md px-3 text-sm"
+              className="w-full h-10 text-gray-200 border border-gray-300 rounded-md px-3 text-sm"
               required
+              placeholder="Enter company name"
+              title="Company"
             />
           </div>
           <div>
@@ -103,8 +105,10 @@ export default function EditJobModal({ job, onClose, onUpdated }: Props) {
               type="text"
               value={position}
               onChange={(e) => setPosition(e.target.value)}
-              className="w-full h-10 text-gray-800 border border-gray-300 rounded-md px-3 text-sm"
+              className="w-full h-10 text-gray-200 border border-gray-300 rounded-md px-3 text-sm"
               required
+              placeholder="Enter position"
+              title="Position"
             />
           </div>
 
@@ -114,7 +118,8 @@ export default function EditJobModal({ job, onClose, onUpdated }: Props) {
             <select
               value={status}
               onChange={(e) => setStatus(e.target.value)}
-              className="w-full h-10 text-gray-800 border border-gray-300 rounded-md px-3 text-sm"
+              className="w-full h-10 text-gray-200 border border-gray-300 rounded-md px-3 text-sm"
+              title="Status"
             >
               {selectableStatuses.map((option) => (
                 <option key={option.value} value={option.value}>
@@ -129,12 +134,14 @@ export default function EditJobModal({ job, onClose, onUpdated }: Props) {
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Interview Date & Time</label>
               <input
-                type="datetime-local"
-                value={interviewDate}
-                onChange={(e) => setInterviewDate(e.target.value)}
-                className="w-full h-10 text-gray-800 border border-gray-300 rounded-md px-3 text-sm"
-                required // Make it required if the status is interview
-              />
+                  type="datetime-local"
+                  value={interviewDate}
+                  onChange={(e) => setInterviewDate(e.target.value)}
+                  className="w-full h-10 text-gray-200 border border-gray-300 rounded-md px-3 text-sm"
+                  required // Make it required if the status is interview
+                  placeholder="Select interview date and time"
+                  title="Interview Date and Time"
+                />
             </div>
           )}
 
@@ -145,7 +152,9 @@ export default function EditJobModal({ job, onClose, onUpdated }: Props) {
               type="date"
               value={dateApplied}
               onChange={(e) => setDateApplied(e.target.value)}
-              className="w-full h-10 text-gray-800 border border-gray-300 rounded-md px-3 text-sm"
+              className="w-full h-10 text-gray-200 border border-gray-300 rounded-md px-3 text-sm"
+              title="Date applied"
+              placeholder="YYYY-MM-DD"
             />
           </div>
 

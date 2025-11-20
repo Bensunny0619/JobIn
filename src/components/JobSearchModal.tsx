@@ -19,8 +19,10 @@ type Props = {
 };
 
 const SEARCH_SOURCES = {
-  GOOGLE_JOBS: 'Google Jobs (via SerpApi)',
+  ADZUNA: 'Adzuna',
+  GOOGLE_JOBS: 'Google Jobs',
   REMOTE_OK: 'RemoteOK',
+  JOBICY: 'Jobicy (Remote)',
 };
 
 export default function JobSearchModal({ isOpen, onClose, onJobSaved }: Props) {
@@ -29,7 +31,7 @@ export default function JobSearchModal({ isOpen, onClose, onJobSaved }: Props) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [savingId, setSavingId] = useState<string | null>(null);
-  const [source, setSource] = useState(SEARCH_SOURCES.GOOGLE_JOBS);
+  const [source, setSource] = useState(SEARCH_SOURCES.ADZUNA);
   const [savedJobIds, setSavedJobIds] = useState<Set<string>>(new Set());
 
   const handleSearch = async (e?: React.FormEvent) => {
@@ -41,50 +43,100 @@ export default function JobSearchModal({ isOpen, onClose, onJobSaved }: Props) {
     setResults([]);
 
     try {
-      let data;
-      if (source === SEARCH_SOURCES.REMOTE_OK) {
-        const response = await fetch(`https://remoteok.com/api?tag=${searchTerm}`);
-        if (!response.ok) throw new Error("Network response was not ok.");
-        const rawData = await response.json();
-        // The first item in the RemoteOK API response is not a job, so we slice it.
-        data = rawData.slice(1).map((job: any) => ({
-          ...job,
-          // Ensure there's a unique id for each job for key and saving purposes
-          id: job.id || `${job.company}-${job.position}-${job.date}` 
-        }));
-      } else {
-        const { data: functionData, error: functionError } = await supabase.functions.invoke(
-          'job-search',
-          { body: { searchTerm } }
-        );
-        if (functionError) {
-          const errorMessage = functionError.context?.msg || functionError.message;
-          throw new Error(errorMessage);
-        }
-        data = functionData.jobs.map((job: any) => ({
-          ...job,
-          id: job.job_id // Ensure a consistent 'id' field
-        }));
+      let rawData: any[] = [];
+
+      switch (source) {
+        case SEARCH_SOURCES.REMOTE_OK:
+          const remoteOkResponse = await fetch(`https://remoteok.com/api?tag=${searchTerm}`);
+          if (!remoteOkResponse.ok) throw new Error("RemoteOK API failed.");
+          rawData = (await remoteOkResponse.json()).slice(1);
+          break;
+        
+        case SEARCH_SOURCES.JOBICY:
+          const jobicyResponse = await fetch(`https://jobicy.com/api/v2/remote-jobs?tag=${searchTerm}`);
+          if (!jobicyResponse.ok) throw new Error("Jobicy API failed.");
+          rawData = (await jobicyResponse.json()).jobs;
+          break;
+
+        case SEARCH_SOURCES.ADZUNA:
+          const { data: adzunaData, error: adzunaError } = await supabase.functions.invoke('adzuna-search', { body: { searchTerm } });
+          if (adzunaError) throw new Error(adzunaError.message);
+          rawData = adzunaData.jobs;
+          break;
+
+        case SEARCH_SOURCES.GOOGLE_JOBS:
+        default:
+          const { data: googleData, error: googleError } = await supabase.functions.invoke('job-search', { body: { searchTerm, engine: 'google_jobs' } });
+          if (googleError) throw new Error(googleError.message);
+          rawData = googleData.jobs;
+          break;
       }
-      setResults(data);
+
+      if (!Array.isArray(rawData)) {
+        throw new Error("API did not return a valid list of jobs.");
+      }
+
+      // --- THIS IS THE FINAL, CORRECTED NORMALIZATION LOGIC ---
+      const normalizedJobs = rawData.map((job: any): RemoteJob => {
+        switch (source) {
+          case SEARCH_SOURCES.REMOTE_OK:
+            return {
+              id: `remoteok-${job.id}`,
+              company: job.company,
+              position: job.position,
+              tags: job.tags || [],
+              location: job.location || 'Remote',
+              url: job.url,
+            };
+          case SEARCH_SOURCES.JOBICY:
+            return {
+              id: `jobicy-${job.id}`,
+              company: job.companyName,
+              position: job.jobTitle,
+              tags: job.jobTags || [],
+              location: job.jobGeo || 'Remote',
+              url: job.url,
+            };
+          case SEARCH_SOURCES.ADZUNA:
+            return {
+              id: job.id, // The adzuna function already prefixes and normalizes
+              company: job.company,
+              position: job.position,
+              tags: job.tags,
+              location: job.location,
+              url: job.url,
+            };
+          case SEARCH_SOURCES.GOOGLE_JOBS:
+          default:
+            return {
+              id: job.id, // The job-search function already prefixes and normalizes
+              company: job.company,
+              position: job.position,
+              tags: job.tags || [],
+              location: job.location,
+              url: job.url,
+            };
+        }
+      });
+      setResults(normalizedJobs);
+
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : String(err);
-      setError(`Failed to fetch jobs: ${message}`);
+      const message = err instanceof Error ? err.message : `An error occurred`;
+      setError(`Failed to fetch jobs from ${source}.`);
+      console.error(`Error searching ${source}:`, err);
     } finally {
       setLoading(false);
     }
   };
-
+  
   useEffect(() => {
     if (isOpen) {
-      // Reset state when the modal opens
       setSavedJobIds(new Set());
-      setResults([]);
-      setError(null);
-      handleSearch(); // Perform an initial search
+      handleSearch();
     }
-  }, [isOpen]);
-
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, source]);
+  
   const handleSaveJob = async (job: RemoteJob) => {
     setSavingId(job.id);
     const { data: { user } } = await supabase.auth.getUser();
@@ -127,17 +179,19 @@ export default function JobSearchModal({ isOpen, onClose, onJobSaved }: Props) {
                 value={searchTerm} 
                 onChange={(e) => setSearchTerm(e.target.value)} 
                 placeholder="e.g., React, Python..." 
-                className="w-full h-10 border border-gray-300 rounded-md px-3 text-sm flex-grow" 
+                className="w-full h-10 border border-gray-300 rounded-md px-3 text-gray-200 text-sm flex-grow" 
               />
               <div className="flex gap-2">
                 <select
                   aria-label="Job search source"
                   value={source}
                   onChange={(e) => setSource(e.target.value)}
-                  className="w-full sm:w-auto h-10 border border-gray-300 rounded-md px-3 text-sm"
+                  className="w-full sm:w-auto h-10 border border-gray-300 text-gray-200 rounded-md px-3 text-sm"
                 >
+                  <option>{SEARCH_SOURCES.ADZUNA}</option>
                   <option>{SEARCH_SOURCES.GOOGLE_JOBS}</option>
                   <option>{SEARCH_SOURCES.REMOTE_OK}</option>
+                  <option>{SEARCH_SOURCES.JOBICY}</option>
                 </select>
                 <button 
                   type="submit" 
@@ -149,11 +203,12 @@ export default function JobSearchModal({ isOpen, onClose, onJobSaved }: Props) {
               </div>
             </form>
           </div>
-          {/* --- UI FOR RESULTS, ERRORS, and SAVING START HERE --- */}
           <div className="flex-1 p-6 overflow-y-auto">
             {error && <p className="text-red-500 text-center">{error}</p>}
             
-            {results.length > 0 && (
+            {loading && <p className="text-center text-gray-500">Searching...</p>}
+            
+            {!loading && results.length > 0 && (
               <ul className="space-y-4">
                 {results.map((job) => (
                   <li key={job.id} className="p-4 border rounded-lg flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -169,11 +224,7 @@ export default function JobSearchModal({ isOpen, onClose, onJobSaved }: Props) {
                       disabled={savingId === job.id || savedJobIds.has(job.id)}
                       className="w-full sm:w-auto bg-green-500 text-white px-4 py-2 rounded-md font-medium hover:bg-green-600 disabled:opacity-50 disabled:bg-gray-400"
                     >
-                      {savedJobIds.has(job.id)
-                        ? 'Saved'
-                        : savingId === job.id
-                        ? 'Saving...'
-                        : 'Save'}
+                      {savedJobIds.has(job.id) ? 'Saved' : savingId === job.id ? 'Saving...' : 'Save'}
                     </button>
                   </li>
                 ))}
@@ -181,10 +232,9 @@ export default function JobSearchModal({ isOpen, onClose, onJobSaved }: Props) {
             )}
             
             {!loading && !error && results.length === 0 && (
-              <p className="text-center text-gray-500 mt-8">No jobs found. Try another search term.</p>
+              <p className="text-center text-gray-500 mt-8">No jobs found. Try another search term or source.</p>
             )}
           </div>
-          {/* --- UI FOR RESULTS, ERRORS, and SAVING END HERE --- */}
         </Dialog.Panel>
       </div>
     </Dialog>

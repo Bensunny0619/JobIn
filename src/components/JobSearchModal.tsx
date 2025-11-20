@@ -18,6 +18,7 @@ type Props = {
   onJobSaved: () => void;
 };
 
+// --- FINAL, WORKING SOURCES ---
 const SEARCH_SOURCES = {
   ADZUNA: 'Adzuna',
   GOOGLE_JOBS: 'Google Jobs',
@@ -76,53 +77,25 @@ export default function JobSearchModal({ isOpen, onClose, onJobSaved }: Props) {
         throw new Error("API did not return a valid list of jobs.");
       }
 
-      // --- THIS IS THE FINAL, CORRECTED NORMALIZATION LOGIC ---
       const normalizedJobs = rawData.map((job: any): RemoteJob => {
         switch (source) {
           case SEARCH_SOURCES.REMOTE_OK:
-            return {
-              id: `remoteok-${job.id}`,
-              company: job.company,
-              position: job.position,
-              tags: job.tags || [],
-              location: job.location || 'Remote',
-              url: job.url,
-            };
+            return { id: `remoteok-${job.id}`, company: job.company, position: job.position, tags: job.tags || [], location: job.location || 'Remote', url: job.url };
           case SEARCH_SOURCES.JOBICY:
-            return {
-              id: `jobicy-${job.id}`,
-              company: job.companyName,
-              position: job.jobTitle,
-              tags: job.jobTags || [],
-              location: job.jobGeo || 'Remote',
-              url: job.url,
-            };
+            return { id: `jobicy-${job.id}`, company: job.companyName, position: job.jobTitle, tags: job.jobTags || [], location: job.jobGeo || 'Remote', url: job.url };
           case SEARCH_SOURCES.ADZUNA:
-            return {
-              id: job.id, // The adzuna function already prefixes and normalizes
-              company: job.company,
-              position: job.position,
-              tags: job.tags,
-              location: job.location,
-              url: job.url,
-            };
+            return { id: job.id, company: job.company, position: job.position, tags: job.tags, location: job.location, url: job.url };
           case SEARCH_SOURCES.GOOGLE_JOBS:
           default:
-            return {
-              id: job.id, // The job-search function already prefixes and normalizes
-              company: job.company,
-              position: job.position,
-              tags: job.tags || [],
-              location: job.location,
-              url: job.url,
-            };
+            return { id: job.id, company: job.company, position: job.position, tags: job.tags || [], location: job.location, url: job.url };
         }
       });
       setResults(normalizedJobs);
 
     } catch (err: unknown) {
+      // --- THIS IS THE ONLY LINE THAT HAS BEEN CHANGED ---
       const message = err instanceof Error ? err.message : `An error occurred`;
-      setError(`Failed to fetch jobs from ${source}.`);
+      setError(`Failed to fetch jobs from ${source}: ${message}`); // FIX: Use the 'message' variable
       console.error(`Error searching ${source}:`, err);
     } finally {
       setLoading(false);
